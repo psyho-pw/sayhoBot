@@ -18,6 +18,7 @@ import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import ytdl from 'ytdl-core'
 import {DiscordClientException} from '../../common/exceptions/discord/discord.client.exception'
+import {SongService} from '../../song/song.service'
 
 export type Song = {
     url: string
@@ -44,6 +45,7 @@ export class DiscordClientService {
     constructor(
         private readonly configService: AppConfigService,
         private readonly httpService: HttpService,
+        private readonly songService: SongService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
@@ -239,6 +241,10 @@ export class DiscordClientService {
 
         try {
             player.play(resource)
+            await this.songService.create({
+                url: nextSong.url,
+                title: nextSong.title,
+            })
             this.isPlaying.set(guildId, true)
             connection.subscribe(player)
         } catch (err: any) {
