@@ -4,9 +4,10 @@ import {forwardRef, Inject, Injectable} from '@nestjs/common'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {AppConfigService} from '../../config/config.service'
-import {Message, PermissionFlagsBits, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
+import {EmbedBuilder, Message, PermissionFlagsBits, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
 import {DiscordClientService, Song} from './discord.client.service'
 import {DiscordCommandException} from '../../common/exceptions/discord/discord.command.exception'
+import {APIEmbedField} from 'discord-api-types/v10'
 
 @Injectable()
 export class DiscordCommandService {
@@ -200,5 +201,77 @@ export class DiscordCommandService {
         this.discordClientService.setIsPlaying(message.guildId, false)
         const msg = await message.reply('queue cleared')
         setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+    }
+
+    async help(message: Message) {
+        if (!message.member?.voice.channel) return message.reply('You have to be in a voice channel to make bot leave')
+        const discordConfig = await this.configService.getDiscordConfig()
+        const embed: EmbedBuilder = new EmbedBuilder()
+            .setColor('#ffffff')
+            .setTitle('Commands')
+            .addFields([
+                {name: 'prefix', value: discordConfig.COMMAND_PREFIX},
+                {name: 'p', value: `음악 재생 => ${discordConfig.COMMAND_PREFIX}p [uri]`},
+                {name: 's', value: `음악 스킵 => ${discordConfig.COMMAND_PREFIX}s`},
+                {name: 'q', value: `음악 큐 조회 => ${discordConfig.COMMAND_PREFIX}q`},
+                {name: 'eq', value: `음악 큐 제거 => ${discordConfig.COMMAND_PREFIX}eq`},
+                {name: 'l', value: `내보내기 => ${discordConfig.COMMAND_PREFIX}l`},
+            ])
+
+        const msg = await message.reply({embeds: [embed]})
+        setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT)
+    }
+
+    async leave(message: Message) {
+        if (!message.member?.voice.channel) return message.reply('You have to be in a voice channel to make bot leave')
+        if (!message.guildId) throw new DiscordCommandException(this.leave.name, 'guild is not specified')
+
+        this.discordClientService.setMusicQueue(message.guildId, [])
+        this.discordClientService.setIsPlaying(message.guildId, false)
+        this.discordClientService.deleteCurrentInfoMsg(message.guildId)
+
+        this.discordClientService.getConnection(message.guildId)?.destroy()
+        this.discordClientService.deleteConnection(message.guildId)
+    }
+
+    async queue(message: Message) {
+        if (!message.member?.voice.channel) return message.reply('You have to be in a voice channel to see queue')
+        if (!message.guildId) throw new DiscordCommandException(this.queue.name, 'guild is not specified')
+
+        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
+        if (!musicQueue.length || musicQueue.length === 1)
+            return message.reply('Queue is empty').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+
+        const embed: EmbedBuilder = new EmbedBuilder().setColor('#ffffff').setTitle('Queue').setThumbnail(musicQueue[1].thumbnail)
+        const fields: Array<APIEmbedField> = []
+
+        musicQueue.forEach((item, idx) => idx !== 0 && idx < 26 && fields.push({name: `${idx}`, value: `${item.title}`}))
+        embed.addFields(fields)
+        await message.reply({embeds: [embed]}).then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+    }
+
+    async skip(message: Message) {
+        if (!message.member?.voice.channel) {
+            const reply = await message.reply('You have to be in a voice channel to see queue')
+            setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+            return
+        }
+        if (!message.guildId) throw new DiscordCommandException(this.skip.name, 'guild is not specified')
+
+        this.logger.verbose('Skipping song...')
+        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
+        this.discordClientService.deleteCurrentInfoMsg(message.guildId)
+        if (musicQueue.length <= 1) {
+            const reply = await message.reply('Nothing to play')
+            setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+
+            this.discordClientService.setMusicQueue(message.guildId, [])
+            this.discordClientService.getPlayer(message.guildId).stop()
+            return
+        }
+
+        musicQueue.shift()
+        this.discordClientService.setMusicQueue(message.guildId, musicQueue)
+        await this.discordClientService.playSong(message)
     }
 }

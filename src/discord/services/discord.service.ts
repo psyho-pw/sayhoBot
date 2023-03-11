@@ -45,6 +45,18 @@ export class DiscordService {
             this.errorHandler(() => this.discordCommandService.emptyQueue(message)),
         )
 
+        const helpCommand = new SlashCommandBuilder().setName('h').setDescription('show commands')
+        this.discordClientService.commands.set(helpCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.help(message)))
+
+        const leaveCommand = new SlashCommandBuilder().setName('l').setDescription('bot leaves voice channel')
+        this.discordClientService.commands.set(leaveCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.leave(message)))
+
+        const queueCommand = new SlashCommandBuilder().setName('q').setDescription('Show music queue')
+        this.discordClientService.commands.set(queueCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.queue(message)))
+
+        const skipCommand = new SlashCommandBuilder().setName('s').setDescription('Skip to next music')
+        this.discordClientService.commands.set(skipCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.skip(message)))
+
         //events
         this.discordClientService.discordBotClient.once('ready', (client: Client) => this.errorHandler(() => this.discordEventService.ready(client)))
 
