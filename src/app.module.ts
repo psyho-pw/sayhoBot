@@ -11,9 +11,16 @@ import {LoggerMiddleware} from './common/middlewares/logger.middleware'
 import {APP_INTERCEPTOR} from '@nestjs/core'
 import {ErrorInterceptor} from './common/interceptors/error.interceptor'
 import {AppController} from './app.controller'
+import {SongModule} from './song/song.module'
 
 @Module({
-    imports: [AppConfigModule, TypeOrmModule.forRootAsync({useClass: TypeormConfigService}), WinstonModule.forRootAsync({useClass: WinstonConfigService}), DiscordModule],
+    imports: [
+        AppConfigModule,
+        TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
+        WinstonModule.forRootAsync({useClass: WinstonConfigService}),
+        DiscordModule,
+        SongModule,
+    ],
     controllers: [AppController],
     providers: [
         {

@@ -14,6 +14,7 @@ export class DiscordEventService {
     constructor(
         private readonly configService: AppConfigService,
         private readonly discordClientService: DiscordClientService,
+
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         // this.discordService.getClient().on('interactionCreate', this.interactionCreate)
