@@ -13,7 +13,7 @@ export class DiscordCommandService {
     private readonly youtube = new Youtube(this.configService.getDiscordConfig().YOUTUBE_API_KEY)
     constructor(
         private readonly configService: AppConfigService,
-        @Inject(forwardRef(() => DiscordClientService)) private readonly discordService: DiscordClientService,
+        @Inject(forwardRef(() => DiscordClientService)) private readonly discordClientService: DiscordClientService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
@@ -21,7 +21,7 @@ export class DiscordCommandService {
         this.logger.info('Playlist detected')
         if (!message.guildId) throw new DiscordCommandException(this.playlistHandler.name, 'guild is not specified')
 
-        const musicQueue = this.discordService.getMusicQueue(message.guildId)
+        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const messageChannel = message.channel as TextChannel
         try {
             const playlist = await this.youtube.getPlaylist(url)
@@ -35,28 +35,28 @@ export class DiscordCommandService {
                 if (item.raw.status.privacyStatus === 'private') continue
 
                 if (idx === 0) thumb = item.thumbnails.high.url
-                const song: Song | null = this.discordService.formatVideo(item, voiceChannel)
+                const song: Song | null = this.discordClientService.formatVideo(item, voiceChannel)
                 if (song) {
                     musicQueue.push(song)
-                    this.discordService.setMusicQueue(message.guildId, musicQueue)
+                    this.discordClientService.setMusicQueue(message.guildId, musicQueue)
                 }
             }
 
             this.logger.info(`queue length: ${musicQueue.length}`)
             this.logger.info(`next: ${JSON.stringify(musicQueue[0].title)}`)
 
-            const reply = await message.reply({embeds: [this.discordService.formatMessageEmbed(url, videosObj.length, musicQueue.length, playlist.title, thumb)]})
+            const reply = await message.reply({embeds: [this.discordClientService.formatMessageEmbed(url, videosObj.length, musicQueue.length, playlist.title, thumb)]})
             setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
 
-            if (!this.discordService.getIsPlaying(message.guildId)) {
-                this.discordService.setIsPlaying(message.guildId, true)
-                return this.discordService.playSong(message)
+            if (!this.discordClientService.getIsPlaying(message.guildId)) {
+                this.discordClientService.setIsPlaying(message.guildId, true)
+                return this.discordClientService.playSong(message)
             }
         } catch (err) {
             message
                 .reply('Playlist is either private or it does not exist')
                 .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
-            throw err
+            throw new DiscordCommandException(this.playlistHandler.name, err.message)
         }
     }
 
@@ -64,25 +64,25 @@ export class DiscordCommandService {
         this.logger.info('Single video/song detected')
         if (!message.guildId) throw new DiscordCommandException(this.singleVidHandler.name, 'guild is not specified')
 
-        const musicQueue = this.discordService.getMusicQueue(message.guildId)
+        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const video = await this.youtube.getVideo(url)
-        const song: Song | null = this.discordService.formatVideo(video, voiceChannel)
+        const song: Song | null = this.discordClientService.formatVideo(video, voiceChannel)
         if (!song)
             return message
                 .reply('Video is either private or it does not exist')
                 .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
         musicQueue.push(song)
-        this.discordService.setMusicQueue(message.guildId, musicQueue)
+        this.discordClientService.setMusicQueue(message.guildId, musicQueue)
 
         this.logger.info(`Queue length: ${musicQueue.length}`)
         this.logger.info(`Current: ${JSON.stringify(musicQueue[0].title)}`)
 
-        const reply = await message.reply({embeds: [this.discordService.formatMessageEmbed(url, 1, musicQueue.length, song.title, song.thumbnail)]})
+        const reply = await message.reply({embeds: [this.discordClientService.formatMessageEmbed(url, 1, musicQueue.length, song.title, song.thumbnail)]})
         setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
 
-        if (!this.discordService.getIsPlaying(message.guildId)) {
-            this.discordService.setIsPlaying(message.guildId, true)
-            return this.discordService.playSong(message)
+        if (!this.discordClientService.getIsPlaying(message.guildId)) {
+            this.discordClientService.setIsPlaying(message.guildId, true)
+            return this.discordClientService.playSong(message)
         }
     }
 
@@ -127,12 +127,12 @@ export class DiscordCommandService {
             ],
         })
 
-        this.discordService.setDeleteQueue(selectList)
+        this.discordClientService.setDeleteQueue(selectList)
     }
     async play(message: Message) {
         if (!message.guildId) throw new DiscordCommandException(this.play.name, 'guild is not specified')
 
-        const musicQueue = this.discordService.getMusicQueue(message.guildId)
+        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const messageChannel = message.channel as TextChannel
 
         const args: string[] = message.content.slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length).trim().split(/ +/g)
@@ -163,10 +163,10 @@ export class DiscordCommandService {
             return
         }
 
-        if (!this.discordService.getIsPlaying(message.guildId) && musicQueue.length === 1) {
+        if (!this.discordClientService.getIsPlaying(message.guildId) && musicQueue.length === 1) {
             musicQueue.shift()
-            this.discordService.setMusicQueue(message.guildId, musicQueue)
-            this.discordService.setIsPlaying(message.guildId, false)
+            this.discordClientService.setMusicQueue(message.guildId, musicQueue)
+            this.discordClientService.setIsPlaying(message.guildId, false)
         }
 
         const query: string = args[1]
@@ -182,8 +182,23 @@ export class DiscordCommandService {
             else if (vidSongCheck) await this.singleVidHandler(query, voiceChannel, message)
             else await this.searchHandler(args, message)
         } catch (err) {
-            this.discordService.setIsPlaying(message.guildId, false)
+            this.discordClientService.setIsPlaying(message.guildId, false)
             throw err
         }
+    }
+
+    async emptyQueue(message: Message) {
+        if (!message.member?.voice.channel) return message.reply('You have to be in a voice channel to clear queue music')
+        if (!message.guildId) throw new DiscordCommandException(this.emptyQueue.name, 'guild is not specified')
+
+        const queue = this.discordClientService.getMusicQueue(message.guildId)
+        if (queue.length === 0) {
+            return message.reply('Queue is empty').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+        }
+
+        this.discordClientService.setMusicQueue(message.guildId, [queue[0]])
+        this.discordClientService.setIsPlaying(message.guildId, false)
+        const msg = await message.reply('queue cleared')
+        setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
     }
 }
