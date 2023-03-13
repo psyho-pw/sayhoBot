@@ -22,20 +22,17 @@ export class DiscordService {
         this.init().then(() => this.logger.verbose('✅  DiscordService instance initialized'))
     }
 
-    async errorHandler(handler: () => Promise<any>) {
+    private async errorHandler(handler: () => Promise<any>) {
         try {
             await handler()
         } catch (err) {
-            if (err instanceof GeneralException) {
-                await this.discordNotificationService.sendMessage(err.message, err.getCalledFrom(), [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
-                return
-            }
-            await this.discordNotificationService.sendMessage(err.message, 'Unhandled Error', [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
+            await this.discordNotificationService.sendErrorReport(err)
         }
     }
 
     async init() {
-        await this.discordClientService.init()
+        await this.errorHandler(() => this.discordClientService.init())
+
         //commands
         const playCommand = new SlashCommandBuilder().setName('p').setDescription('Plays music with uri')
         this.discordClientService.commands.set(playCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.play(message)))
