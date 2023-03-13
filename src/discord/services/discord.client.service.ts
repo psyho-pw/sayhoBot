@@ -259,7 +259,6 @@ export class DiscordClientService {
             liveBuffer: 4000,
         }).on('error', (error: any) => {
             this.logger.error(error)
-            throw new DiscordClientException(this.playSong.name, error.message)
         })
 
         const resource: AudioResource = createAudioResource(stream, {inputType: StreamType.Arbitrary})
