@@ -106,9 +106,9 @@ export class DiscordClientService {
             .setThumbnail(thumbnail)
     }
 
-    private playerWrapper = (handler: (message: Message) => Promise<any>, message: Message) => async (guildId: string) => {
+    private async playerWrapper(handler: () => Promise<any>, guildId: string) {
         try {
-            await handler(message)
+            await handler()
         } catch (err) {
             const player = this.player.get(guildId)
             if (!player) return this.logger.error('player not found')
@@ -119,7 +119,6 @@ export class DiscordClientService {
         const guildId = message.guildId || ''
 
         const channel = message.channel as TextChannel
-
         const musicQueue = this.musicQueue.get(guildId)
         if (!musicQueue) throw new DiscordClientException(this.playerOnPlayHandler.name, 'Queue does not exist')
 
@@ -206,8 +205,8 @@ export class DiscordClientService {
         const channel = message.channel as TextChannel
 
         player
-            .on(AudioPlayerStatus.Playing, () => this.playerWrapper(this.playerOnPlayHandler, message)(guildId))
-            .on(AudioPlayerStatus.Idle, () => this.playerWrapper(this.playerIdleHandler, message)(guildId))
+            .on(AudioPlayerStatus.Playing, () => this.playerWrapper(() => this.playerOnPlayHandler(message), guildId))
+            .on(AudioPlayerStatus.Idle, () => this.playerWrapper(() => this.playerIdleHandler(message), guildId))
             .on('error', async err => {
                 this.logger.error('fatal error occurred')
                 const musicQueue = this.musicQueue.get(guildId)
