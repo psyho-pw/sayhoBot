@@ -19,6 +19,7 @@ import {Logger} from 'winston'
 import ytdl from 'ytdl-core'
 import {DiscordClientException} from '../../common/exceptions/discord/discord.client.exception'
 import {SongService} from '../../song/song.service'
+import {DiscordNotificationService} from './discord.notification.service'
 
 export type Song = {
     url: string
@@ -46,6 +47,7 @@ export class DiscordClientService {
         private readonly configService: AppConfigService,
         private readonly httpService: HttpService,
         private readonly songService: SongService,
+        private readonly discordNotificationService: DiscordNotificationService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
@@ -104,6 +106,98 @@ export class DiscordClientService {
             .setThumbnail(thumbnail)
     }
 
+    private playerWrapper = (handler: (message: Message) => Promise<any>, message: Message) => async (guildId: string) => {
+        try {
+            await handler(message)
+        } catch (err) {
+            const player = this.player.get(guildId)
+            if (!player) return this.logger.error('player not found')
+            player.emit('error', err)
+        }
+    }
+    private async playerOnPlayHandler(message: Message) {
+        const guildId = message.guildId || ''
+
+        const channel = message.channel as TextChannel
+
+        const musicQueue = this.musicQueue.get(guildId)
+        if (!musicQueue) throw new DiscordClientException(this.playerOnPlayHandler.name, 'Queue does not exist')
+
+        const currentItem = musicQueue[0]
+        if (!currentItem) throw new DiscordClientException(this.playerOnPlayHandler.name, 'Queue item is corrupted')
+
+        const embed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle(`:: Currently playing :arrow_forward: ::`)
+            .setURL(currentItem.url)
+            .setThumbnail(currentItem.thumbnail)
+            .setDescription(`${currentItem.title} (${currentItem.duration})`)
+            .addFields([
+                {name: 'Requester', value: (message.mentions.repliedUser || message.author).toString(), inline: true},
+                {name: 'PlayTime', value: '00 : 00', inline: true},
+            ])
+
+        const msg = await channel.send({embeds: [embed]})
+
+        let tick = 1
+        const intervalRef = setInterval(async () => {
+            const time = tick++
+            embed.setFields([
+                msg.embeds[0].fields[0],
+                {
+                    name: 'Playtime',
+                    value: (~~(time / 60)).toString().padStart(2, '0') + ' : ' + (time % 60).toString().padStart(2, '0'),
+                    inline: true,
+                },
+            ])
+
+            try {
+                await msg.edit({embeds: [embed]})
+            } catch (err) {
+                clearInterval(intervalRef)
+            }
+        }, 1000)
+
+        this.currentInfoMsg.set(guildId, msg)
+        this.logger.info(`Currently playing ${currentItem.title}`)
+    }
+
+    private async playerIdleHandler(message: Message) {
+        const guildId = message.guildId
+        if (!guildId) throw new DiscordClientException(this.playerIdleHandler.name, 'guildId not specified')
+
+        const channel = message.channel as TextChannel
+
+        this.deleteCurrentInfoMsg(guildId)
+        const musicQueue = this.musicQueue.get(guildId)
+
+        if (!musicQueue) throw new DiscordClientException(this.playerIdleHandler.name, 'Queue does not exist')
+
+        if (musicQueue.length > 1) {
+            this.logger.debug('queue length is not zero')
+            musicQueue.shift()
+            this.musicQueue.set(guildId, musicQueue)
+            await this.playSong(message)
+            return
+        }
+
+        this.logger.debug('queue empty')
+        this.isPlaying.set(guildId, false)
+        setTimeout(() => {
+            if ((this.musicQueue.get(guildId) || []).length <= 1 && !this.isPlaying.get(guildId)) {
+                this.musicQueue.set(guildId, [])
+                this.isPlaying.set(guildId, false)
+                this.volume.set(guildId, 1)
+
+                channel
+                    .send(`Disconnected from channel due to inactivity`)
+                    .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+                this.connection.get(guildId)?.destroy()
+                this.connection.delete(guildId)
+            }
+        }, 180000)
+    }
+
     private createPlayer(message: Message) {
         const guildId = message.guildId
         if (!guildId) throw new DiscordClientException(this.createPlayer.name, 'guildId not specified')
@@ -112,56 +206,10 @@ export class DiscordClientService {
         const channel = message.channel as TextChannel
 
         player
-            .on(AudioPlayerStatus.Playing, async () => {
-                const musicQueue = this.musicQueue.get(guildId)
-                if (!musicQueue) throw new DiscordClientException(this.createPlayer.name, 'Queue does not exist')
-
-                const currentItem = musicQueue[0]
-                if (!currentItem) throw new DiscordClientException(this.createPlayer.name, 'Queue item is corrupted')
-
-                const embed = new EmbedBuilder()
-                    .setColor('#0099ff')
-                    .setTitle(`:: Currently playing :arrow_forward: ::`)
-                    .setURL(currentItem.url)
-                    .setDescription(`${currentItem.title} (${currentItem.duration})`)
-                    .setThumbnail(currentItem.thumbnail)
-
-                const msg = await channel.send({embeds: [embed]})
-                this.currentInfoMsg.set(guildId, msg)
-                this.logger.info(`Currently playing ${currentItem.title}`)
-            })
-            .on(AudioPlayerStatus.Idle, async () => {
-                this.deleteCurrentInfoMsg(guildId)
-                const musicQueue = this.musicQueue.get(guildId)
-
-                if (!musicQueue) throw new DiscordClientException(this.createPlayer.name, 'Queue does not exist')
-
-                if (musicQueue.length > 1) {
-                    this.logger.debug('queue length is not zero')
-                    musicQueue.shift()
-                    this.musicQueue.set(guildId, musicQueue)
-                    await this.playSong(message)
-                    return
-                }
-
-                this.logger.debug('queue empty')
-                this.isPlaying.set(guildId, false)
-                setTimeout(() => {
-                    if ((this.musicQueue.get(guildId) || []).length <= 1 && !this.isPlaying.get(guildId)) {
-                        this.musicQueue.set(guildId, [])
-                        this.isPlaying.set(guildId, false)
-                        this.volume.set(guildId, 1)
-
-                        channel
-                            .send(`Disconnected from channel due to inactivity`)
-                            .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
-                        this.connection.get(guildId)?.destroy()
-                        this.connection.delete(guildId)
-                    }
-                }, 180000)
-            })
+            .on(AudioPlayerStatus.Playing, () => this.playerWrapper(this.playerOnPlayHandler, message)(guildId))
+            .on(AudioPlayerStatus.Idle, () => this.playerWrapper(this.playerIdleHandler, message)(guildId))
             .on('error', async err => {
-                this.logger.error('error occurred')
+                this.logger.error('fatal error occurred')
                 const musicQueue = this.musicQueue.get(guildId)
                 this.isPlaying.set(guildId, false)
                 this.deleteCurrentInfoMsg(guildId)
@@ -174,10 +222,11 @@ export class DiscordClientService {
                         .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
                 }
 
-                await channel.send('error occurred')
+                await channel.send('\n' + 'fatal error occurred')
                 this.connection.get(guildId)?.destroy()
                 this.connection.delete(guildId)
-                throw new DiscordClientException(this.createPlayer.name, 'error occurred')
+
+                await this.discordNotificationService.sendErrorReport(err)
             })
 
         return player
@@ -210,8 +259,8 @@ export class DiscordClientService {
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
         }).on('error', (error: any) => {
-            // message.reply(error)
             this.logger.error(error)
+            throw new DiscordClientException(this.playSong.name, error.message)
         })
 
         const resource: AudioResource = createAudioResource(stream, {inputType: StreamType.Arbitrary})
@@ -225,9 +274,8 @@ export class DiscordClientService {
                 guildId: message.guild.id,
                 adapterCreator: message.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
             })
-            this.connection.set(guildId, connection)
 
-            // this.#musicQueue.set(guildId, [])
+            this.connection.set(guildId, connection)
             this.isPlaying.set(guildId, false)
             this.volume.set(guildId, 1)
         }
