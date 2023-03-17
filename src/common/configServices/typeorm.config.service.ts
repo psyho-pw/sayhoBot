@@ -10,6 +10,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         return {
             ...this.configService.getDBConfig(),
             entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
+            keepConnectionAlive: true,
             // dropSchema: true,
         }
     }

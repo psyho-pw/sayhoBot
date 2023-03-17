@@ -14,7 +14,7 @@ export class DiscordCommandService {
     private readonly youtube = new Youtube(this.configService.getDiscordConfig().YOUTUBE_API_KEY)
     constructor(
         private readonly configService: AppConfigService,
-        @Inject(forwardRef(() => DiscordClientService)) private readonly discordClientService: DiscordClientService,
+        private readonly discordClientService: DiscordClientService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
