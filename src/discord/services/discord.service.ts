@@ -6,7 +6,7 @@ import {DiscordNotificationService} from './discord.notification.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {AppConfigService} from '../../config/config.service'
-import {Client, ClientEvents, Interaction, Message, SlashCommandBuilder, VoiceState} from 'discord.js'
+import {Client, ClientEvents, Interaction, Message, Routes, SlashCommandBuilder, VoiceState} from 'discord.js'
 import {GeneralException} from '../../common/exceptions/general.exception'
 
 @Injectable()
@@ -34,25 +34,34 @@ export class DiscordService {
         await this.errorHandler(() => this.discordClientService.init())
 
         //commands
+        const slashCommands = []
         const playCommand = new SlashCommandBuilder().setName('p').setDescription('Plays music with uri')
+        slashCommands.push(playCommand.toJSON())
         this.discordClientService.commands.set(playCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.play(message)))
 
         const emptyQueueCommand = new SlashCommandBuilder().setName('eq').setDescription('Empty music queue')
+        slashCommands.push(emptyQueueCommand.toJSON())
         this.discordClientService.commands.set(emptyQueueCommand.name.toLowerCase(), (message: Message) =>
             this.errorHandler(() => this.discordCommandService.emptyQueue(message)),
         )
 
         const helpCommand = new SlashCommandBuilder().setName('h').setDescription('show commands')
+        slashCommands.push(helpCommand.toJSON())
         this.discordClientService.commands.set(helpCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.help(message)))
 
         const leaveCommand = new SlashCommandBuilder().setName('l').setDescription('bot leaves voice channel')
+        slashCommands.push(leaveCommand.toJSON())
         this.discordClientService.commands.set(leaveCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.leave(message)))
 
         const queueCommand = new SlashCommandBuilder().setName('q').setDescription('Show music queue')
+        slashCommands.push(queueCommand.toJSON())
         this.discordClientService.commands.set(queueCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.queue(message)))
 
         const skipCommand = new SlashCommandBuilder().setName('s').setDescription('Skip to next music')
+        slashCommands.push(skipCommand.toJSON())
         this.discordClientService.commands.set(skipCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.skip(message)))
+
+        await this.discordClientService.Rest.put(Routes.applicationCommands(this.configService.getDiscordConfig().CLIENT_ID), {body: slashCommands})
 
         //events
         this.discordClientService.discordBotClient.once('ready', (client: Client) => this.errorHandler(() => this.discordEventService.ready(client)))

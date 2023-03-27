@@ -1,5 +1,5 @@
 import {Inject, Injectable} from '@nestjs/common'
-import {Client, Collection, EmbedBuilder, GatewayIntentBits, Message, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
+import {Client, Collection, EmbedBuilder, GatewayIntentBits, Message, REST, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -42,6 +42,7 @@ export class DiscordClientService {
     private player = new Map<string, AudioPlayer>()
     private connection = new Map<string, VoiceConnection>()
     private deleteQueue: Map<string, Map<string, Message>> = new Map()
+    private rest: REST
 
     constructor(
         private readonly configService: AppConfigService,
@@ -64,9 +65,11 @@ export class DiscordClientService {
 
         this.logger.verbose(generateDependencyReport())
         try {
+            this.rest = new REST({version: '10'}).setToken(this.configService.getDiscordConfig().TOKEN)
             await this.discordBotClient.login(this.configService.getDiscordConfig().TOKEN)
             this.logger.verbose('✅  DiscordBotClient instance initialized')
         } catch (err) {
+            console.error(err)
             throw new DiscordClientException(this.init.name, 'login failed')
         }
     }
@@ -360,5 +363,13 @@ export class DiscordClientService {
     getUser() {
         console.log(this.discordBotClient.user?.tag)
         return this.discordBotClient.user?.tag
+    }
+
+    get Rest() {
+        return this.rest
+    }
+
+    set Rest(rest: REST) {
+        this.rest = rest
     }
 }
