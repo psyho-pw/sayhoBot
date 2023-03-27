@@ -131,32 +131,9 @@ export class DiscordClientService {
             .setURL(currentItem.url)
             .setThumbnail(currentItem.thumbnail)
             .setDescription(`${currentItem.title} (${currentItem.duration})`)
-            .addFields([
-                {name: 'Requester', value: (message.mentions.repliedUser || message.author).toString(), inline: true},
-                {name: 'PlayTime', value: '00 : 00', inline: true},
-            ])
+            .addFields([{name: 'Requester', value: (message.mentions.repliedUser || message.author).toString(), inline: true}])
 
         const msg = await channel.send({embeds: [embed]})
-
-        let tick = 1
-        const intervalRef = setInterval(async () => {
-            const time = tick++
-            embed.setFields([
-                msg.embeds[0].fields[0],
-                {
-                    name: 'Playtime',
-                    value: (~~(time / 60)).toString().padStart(2, '0') + ' : ' + (time % 60).toString().padStart(2, '0'),
-                    inline: true,
-                },
-            ])
-
-            try {
-                await msg.edit({embeds: [embed]})
-            } catch (err) {
-                clearInterval(intervalRef)
-            }
-        }, 1000)
-
         this.currentInfoMsg.set(guildId, msg)
         this.logger.info(`Currently playing ${currentItem.title}`)
     }
