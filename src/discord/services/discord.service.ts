@@ -35,7 +35,10 @@ export class DiscordService {
 
         //commands
         const slashCommands = []
-        const playCommand = new SlashCommandBuilder().setName('p').setDescription('Plays music with uri')
+        const playCommand = new SlashCommandBuilder()
+            .setName('p')
+            .setDescription('Plays music with url or search parameter')
+            .addStringOption(option => option.setName('input').setDescription('url or search text').setRequired(true))
         slashCommands.push(playCommand.toJSON())
         this.discordClientService.commands.set(playCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.play(message)))
 
