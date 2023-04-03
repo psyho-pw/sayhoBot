@@ -1,5 +1,17 @@
 import {Inject, Injectable} from '@nestjs/common'
-import {Client, Collection, EmbedBuilder, GatewayIntentBits, Message, REST, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
+import {
+    ChatInputCommandInteraction,
+    Client,
+    Collection,
+    EmbedBuilder,
+    GatewayIntentBits,
+    InteractionResponse,
+    Message,
+    REST,
+    StageChannel,
+    TextChannel,
+    VoiceChannel,
+} from 'discord.js'
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -20,6 +32,7 @@ import ytdl from 'ytdl-core'
 import {DiscordClientException} from '../../common/exceptions/discord/discord.client.exception'
 import {SongService} from '../../song/song.service'
 import {DiscordNotificationService} from './discord.notification.service'
+import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
 export type Song = {
     url: string
@@ -41,7 +54,7 @@ export class DiscordClientService {
     private volume = new Map<string, number>()
     private player = new Map<string, AudioPlayer>()
     private connection = new Map<string, VoiceConnection>()
-    private deleteQueue: Map<string, Map<string, Message>> = new Map()
+    private deleteQueue: Map<string, Map<string, Message | InteractionResponse>> = new Map()
     private rest: REST
 
     constructor(
@@ -52,6 +65,7 @@ export class DiscordClientService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
+    @DiscordErrorHandler()
     async init() {
         this.discordBotClient = new Client({
             intents: [
@@ -118,7 +132,7 @@ export class DiscordClientService {
             player.emit('error', err)
         }
     }
-    private async playerOnPlayHandler(message: Message) {
+    private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId || ''
 
         const channel = message.channel as TextChannel
@@ -134,14 +148,13 @@ export class DiscordClientService {
             .setURL(currentItem.url)
             .setThumbnail(currentItem.thumbnail)
             .setDescription(`${currentItem.title} (${currentItem.duration})`)
-            .addFields([{name: 'Requester', value: (message.mentions.repliedUser || message.author).toString(), inline: true}])
 
         const msg = await channel.send({embeds: [embed]})
         this.currentInfoMsg.set(guildId, msg)
         this.logger.info(`Currently playing ${currentItem.title}`)
     }
 
-    private async playerIdleHandler(message: Message) {
+    private async playerIdleHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
         if (!guildId) throw new DiscordClientException(this.playerIdleHandler.name, 'guildId not specified')
 
@@ -177,7 +190,7 @@ export class DiscordClientService {
         }, 180000)
     }
 
-    private createPlayer(message: Message) {
+    private createPlayer(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
         if (!guildId) throw new DiscordClientException(this.createPlayer.name, 'guildId not specified')
 
@@ -211,7 +224,7 @@ export class DiscordClientService {
         return player
     }
 
-    async playSong(message: Message) {
+    async playSong(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
         if (!guildId) throw new DiscordClientException(this.playSong.name, 'guildId not specified')
 
@@ -287,10 +300,9 @@ export class DiscordClientService {
         this.currentInfoMsg.delete(guildId)
     }
 
-    setDeleteQueue(message: Message) {
-        const guildId = message.guildId
+    setDeleteQueue(guildId: string, message: Message | InteractionResponse) {
         if (!guildId) throw new DiscordClientException(this.setDeleteQueue.name, 'guildId not specified')
-        this.deleteQueue.set(guildId, (this.deleteQueue.get(guildId) || new Map<string, Message>()).set(message.id, message))
+        this.deleteQueue.set(guildId, (this.deleteQueue.get(guildId) || new Map<string, Message | InteractionResponse>()).set(message.id, message))
     }
 
     removeFromDeleteQueue(guildId: string, id: string) {

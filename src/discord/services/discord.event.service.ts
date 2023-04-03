@@ -7,6 +7,7 @@ import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Client, CommandInteraction, Guild, GuildMember, Interaction, Message, SelectMenuInteraction, Snowflake, VoiceState} from 'discord.js'
 import {DiscordEventException} from '../../common/exceptions/discord/discord.event.exception'
+import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
 @Injectable()
 export class DiscordEventService {
@@ -20,13 +21,14 @@ export class DiscordEventService {
         // this.discordService.getClient().on('interactionCreate', this.interactionCreate)
     }
 
+    @DiscordErrorHandler()
     async ready(client: Client) {
         this.logger.verbose(`Logged in as ${this.discordClientService.getUser()}`)
         this.logger.verbose(`SayhoBot server ready`)
     }
 
+    @DiscordErrorHandler(true)
     private async commandHandler(interaction: CommandInteraction) {
-        console.log(this.commandHandler.name)
         const command = this.discordClientService.commands.get(interaction.commandName)
         if (!command) return
         this.logger.info(`request:: command: ${interaction.commandName}, user: ${interaction.user.tag}`)
@@ -38,6 +40,7 @@ export class DiscordEventService {
         }
     }
 
+    @DiscordErrorHandler(true)
     private async selectMenuHandler(interaction: SelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
         const guild: Guild | undefined = this.discordClientService.getClient().guilds.cache.get(interaction.guildId ?? '')
@@ -68,11 +71,13 @@ export class DiscordEventService {
             await this.discordClientService.playSong(interaction.message)
         }
     }
+    @DiscordErrorHandler()
     async interactionCreate(interaction: Interaction) {
         if (interaction.isStringSelectMenu()) await this.selectMenuHandler(interaction)
         else if (interaction.isChatInputCommand()) await this.commandHandler(interaction)
     }
 
+    @DiscordErrorHandler()
     async messageCreate(message: Message) {
         this.logger.info(`message received ${message.content}`)
         if (message.author.bot) return
@@ -101,6 +106,7 @@ export class DiscordEventService {
         }
     }
 
+    @DiscordErrorHandler()
     async voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
         if (oldState.channelId !== (oldState.guild.members.me?.voice.channelId || newState.channel)) return
 
