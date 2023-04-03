@@ -32,6 +32,7 @@ import ytdl from 'ytdl-core'
 import {DiscordClientException} from '../../common/exceptions/discord/discord.client.exception'
 import {SongService} from '../../song/song.service'
 import {DiscordNotificationService} from './discord.notification.service'
+import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
 export type Song = {
     url: string
@@ -64,6 +65,7 @@ export class DiscordClientService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
+    @DiscordErrorHandler()
     async init() {
         this.discordBotClient = new Client({
             intents: [

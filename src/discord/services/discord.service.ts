@@ -21,16 +21,8 @@ export class DiscordService {
         this.init().then(() => this.logger.verbose('✅  DiscordService instance initialized'))
     }
 
-    private async errorHandler(handler: () => Promise<any>) {
-        try {
-            await handler()
-        } catch (err) {
-            await this.discordNotificationService.sendErrorReport(err)
-        }
-    }
-
     async init() {
-        await this.errorHandler(() => this.discordClientService.init())
+        await this.discordClientService.init()
 
         //commands
         const slashCommands = []
@@ -39,45 +31,55 @@ export class DiscordService {
             .setDescription('Plays music with url or search parameter')
             .addStringOption(option => option.setName('input').setDescription('url or search text').setRequired(true))
         slashCommands.push(playCommand.toJSON())
+        // this.discordClientService.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+        //     this.errorHandler(() => this.discordCommandService.play(payload)),
+        // )
+
         this.discordClientService.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-            this.errorHandler(() => this.discordCommandService.play(payload)),
+            this.discordCommandService.play(payload),
         )
 
         const emptyQueueCommand = new SlashCommandBuilder().setName('eq').setDescription('Empty music queue')
         slashCommands.push(emptyQueueCommand.toJSON())
-        this.discordClientService.commands.set(emptyQueueCommand.name.toLowerCase(), (message: Message) =>
-            this.errorHandler(() => this.discordCommandService.emptyQueue(message)),
+        this.discordClientService.commands.set(emptyQueueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.discordCommandService.emptyQueue(payload),
         )
 
         const helpCommand = new SlashCommandBuilder().setName('h').setDescription('show commands')
         slashCommands.push(helpCommand.toJSON())
-        this.discordClientService.commands.set(helpCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.help(message)))
+        this.discordClientService.commands.set(helpCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.discordCommandService.help(payload),
+        )
 
         const leaveCommand = new SlashCommandBuilder().setName('l').setDescription('bot leaves voice channel')
         slashCommands.push(leaveCommand.toJSON())
-        this.discordClientService.commands.set(leaveCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.leave(message)))
+        this.discordClientService.commands.set(leaveCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.discordCommandService.leave(payload),
+        )
 
         const queueCommand = new SlashCommandBuilder().setName('q').setDescription('Show music queue')
         slashCommands.push(queueCommand.toJSON())
-        this.discordClientService.commands.set(queueCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.queue(message)))
+        this.discordClientService.commands.set(queueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.discordCommandService.queue(payload),
+        )
 
         const skipCommand = new SlashCommandBuilder().setName('s').setDescription('Skip to next music')
         slashCommands.push(skipCommand.toJSON())
-        this.discordClientService.commands.set(skipCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.skip(message)))
+        this.discordClientService.commands.set(skipCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.discordCommandService.skip(payload),
+        )
 
         await this.discordClientService.Rest.put(Routes.applicationCommands(this.configService.getDiscordConfig().CLIENT_ID), {body: slashCommands})
 
         //events
-        this.discordClientService.discordBotClient.once('ready', (client: Client) => this.errorHandler(() => this.discordEventService.ready(client)))
+        this.discordClientService.discordBotClient.once('ready', (client: Client) => this.discordEventService.ready(client))
 
-        this.discordClientService.discordBotClient.on('interactionCreate', (interaction: Interaction) =>
-            this.errorHandler(() => this.discordEventService.interactionCreate(interaction)),
-        )
+        this.discordClientService.discordBotClient.on('interactionCreate', (interaction: Interaction) => this.discordEventService.interactionCreate(interaction))
 
-        this.discordClientService.discordBotClient.on('messageCreate', message => this.errorHandler(() => this.discordEventService.messageCreate(message)))
+        this.discordClientService.discordBotClient.on('messageCreate', message => this.discordEventService.messageCreate(message))
 
         this.discordClientService.discordBotClient.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) =>
-            this.errorHandler(() => this.discordEventService.voiceStateUpdate(oldState, newState)),
+            this.discordEventService.voiceStateUpdate(oldState, newState),
         )
     }
 }
