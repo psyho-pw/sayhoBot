@@ -1,10 +1,10 @@
 //@ts-ignore
 import Youtube from 'simple-youtube-api'
-import {forwardRef, Inject, Injectable} from '@nestjs/common'
+import {Inject, Injectable} from '@nestjs/common'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {AppConfigService} from '../../config/config.service'
-import {EmbedBuilder, Message, PermissionFlagsBits, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
+import {ChatInputCommandInteraction, EmbedBuilder, Message, PermissionFlagsBits, StageChannel, TextChannel, VoiceChannel} from 'discord.js'
 import {DiscordClientService, Song} from './discord.client.service'
 import {DiscordCommandException} from '../../common/exceptions/discord/discord.command.exception'
 import {APIEmbedField} from 'discord-api-types/v10'
@@ -18,7 +18,7 @@ export class DiscordCommandService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
-    private async playlistHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message) {
+    private async playlistHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message | ChatInputCommandInteraction) {
         this.logger.info('Playlist detected')
         if (!message.guildId) throw new DiscordCommandException(this.playlistHandler.name, 'guild is not specified')
 
@@ -61,7 +61,7 @@ export class DiscordCommandService {
         }
     }
 
-    private async singleVidHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message) {
+    private async singleVidHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message | ChatInputCommandInteraction) {
         this.logger.info('Single video/song detected')
         if (!message.guildId) throw new DiscordCommandException(this.singleVidHandler.name, 'guild is not specified')
 
@@ -87,12 +87,8 @@ export class DiscordCommandService {
         }
     }
 
-    private async searchHandler(args: string[], message: Message) {
+    private async searchHandler(searchTxt: string, message: Message | ChatInputCommandInteraction) {
         this.logger.info('Search detected')
-        let searchTxt = ''
-        args.forEach((item, idx) => {
-            if (idx !== 0) searchTxt += `${item} `
-        })
 
         searchTxt = searchTxt.trim()
         this.logger.debug(`searchTxt: ${searchTxt}`)
@@ -112,38 +108,42 @@ export class DiscordCommandService {
 
         const selectList = await message.reply({
             content: `'${searchTxt}' 검색 결과`,
-            components: [
-                {
-                    type: 1,
-                    components: [
-                        {
-                            type: 3,
-                            custom_id: 'select',
-                            options: list,
-                            placeholder: '재생할 노래 선택',
-                            max_values: 1,
-                        },
-                    ],
-                },
-            ],
+            components: [{type: 1, components: [{type: 3, custom_id: 'select', options: list, placeholder: '재생할 노래 선택', max_values: 1}]}],
         })
 
-        this.discordClientService.setDeleteQueue(selectList)
+        this.discordClientService.setDeleteQueue(message.guildId || '', selectList)
     }
-    async play(message: Message) {
-        if (!message.guildId) throw new DiscordCommandException(this.play.name, 'guild is not specified')
+    async play(payload: Message | ChatInputCommandInteraction) {
+        console.log(payload)
+        // console.log(message)
+        if (!payload.guildId) throw new DiscordCommandException(this.play.name, 'guild is not specified')
 
-        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
-        const messageChannel = message.channel as TextChannel
+        const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
+        const messageChannel = payload.channel as TextChannel
 
-        const args: string[] = message.content.slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length).trim().split(/ +/g)
-        if (args.length < 2) {
-            const msg = await message.reply(`parameter count doesn't match`)
-            setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
-            return
+        let content = ''
+        let voiceChannel: VoiceChannel | StageChannel | null | undefined = null
+        if (payload instanceof ChatInputCommandInteraction) {
+            content = payload.options.getString('input') ?? ''
+            if (!content.length) {
+                const msg = await payload.reply(`parameter count doesn't match`)
+                setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+                return
+            }
+            const member = payload.guild?.members.cache.get(payload.member?.user.id || '')
+            voiceChannel = member?.voice.channel
+        } else {
+            const args: string[] = payload.content.slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length).trim().split(/ +/g)
+            if (args.length < 2) {
+                const msg = await payload.reply(`parameter count doesn't match`)
+                setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+                return
+            }
+            content = args[1]
+            voiceChannel = payload.member?.voice.channel
         }
 
-        const voiceChannel: VoiceChannel | StageChannel | null | undefined = message.member?.voice.channel
+        // const voiceChannel: VoiceChannel | StageChannel | null | undefined = payload.member?.voice.channel
         this.logger.verbose(JSON.stringify(voiceChannel))
         if (!voiceChannel) {
             const sentMessage = await messageChannel.send('You need to be in a voice channel to play music')
@@ -151,7 +151,7 @@ export class DiscordCommandService {
             return
         }
 
-        const permissions = voiceChannel.permissionsFor(message.client.user)
+        const permissions = voiceChannel.permissionsFor(payload.client.user)
         if (!permissions) {
             const sentMessage = await messageChannel.send('Permission Error')
             setTimeout(() => sentMessage.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
@@ -164,26 +164,25 @@ export class DiscordCommandService {
             return
         }
 
-        if (!this.discordClientService.getIsPlaying(message.guildId) && musicQueue.length === 1) {
+        if (!this.discordClientService.getIsPlaying(payload.guildId) && musicQueue.length === 1) {
             musicQueue.shift()
-            this.discordClientService.setMusicQueue(message.guildId, musicQueue)
-            this.discordClientService.setIsPlaying(message.guildId, false)
+            this.discordClientService.setMusicQueue(payload.guildId, musicQueue)
+            this.discordClientService.setIsPlaying(payload.guildId, false)
         }
 
-        const query: string = args[1]
         const playlistCheck =
-            query.match(/^(?!.*\?.*\bv=)https:\/\/(www\.)?youtube\.com\/.*\?.*\blist=.*$/) || query.match(/https:\/\/music\.youtube\.com\/playlist\?list=.*/)
+            content.match(/^(?!.*\?.*\bv=)https:\/\/(www\.)?youtube\.com\/.*\?.*\blist=.*$/) || content.match(/https:\/\/music\.youtube\.com\/playlist\?list=.*/)
         const vidSongCheck =
-            query.match(/https:\/\/(www\.)?youtube\.com\/watch\?v=.*/) ||
-            query.match(/https:\/\/youtu\.be\/.*/) ||
-            query.match(/https:\/\/music\.youtube\.com\/watch\?v=.*/)
+            content.match(/https:\/\/(www\.)?youtube\.com\/watch\?v=.*/) ||
+            content.match(/https:\/\/youtu\.be\/.*/) ||
+            content.match(/https:\/\/music\.youtube\.com\/watch\?v=.*/)
 
         try {
-            if (playlistCheck) await this.playlistHandler(query, voiceChannel, message)
-            else if (vidSongCheck) await this.singleVidHandler(query, voiceChannel, message)
-            else await this.searchHandler(args, message)
+            if (playlistCheck) await this.playlistHandler(content, voiceChannel, payload)
+            else if (vidSongCheck) await this.singleVidHandler(content, voiceChannel, payload)
+            else await this.searchHandler(content, payload)
         } catch (err) {
-            this.discordClientService.setIsPlaying(message.guildId, false)
+            this.discordClientService.setIsPlaying(payload.guildId, false)
             throw err
         }
     }

@@ -6,8 +6,7 @@ import {DiscordNotificationService} from './discord.notification.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {AppConfigService} from '../../config/config.service'
-import {Client, ClientEvents, Interaction, Message, Routes, SlashCommandBuilder, VoiceState} from 'discord.js'
-import {GeneralException} from '../../common/exceptions/general.exception'
+import {ChatInputCommandInteraction, Client, Interaction, Message, Routes, SlashCommandBuilder, VoiceState} from 'discord.js'
 
 @Injectable()
 export class DiscordService {
@@ -40,7 +39,9 @@ export class DiscordService {
             .setDescription('Plays music with url or search parameter')
             .addStringOption(option => option.setName('input').setDescription('url or search text').setRequired(true))
         slashCommands.push(playCommand.toJSON())
-        this.discordClientService.commands.set(playCommand.name.toLowerCase(), (message: Message) => this.errorHandler(() => this.discordCommandService.play(message)))
+        this.discordClientService.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+            this.errorHandler(() => this.discordCommandService.play(payload)),
+        )
 
         const emptyQueueCommand = new SlashCommandBuilder().setName('eq').setDescription('Empty music queue')
         slashCommands.push(emptyQueueCommand.toJSON())

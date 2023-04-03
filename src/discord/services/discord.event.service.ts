@@ -26,7 +26,6 @@ export class DiscordEventService {
     }
 
     private async commandHandler(interaction: CommandInteraction) {
-        console.log(this.commandHandler.name)
         const command = this.discordClientService.commands.get(interaction.commandName)
         if (!command) return
         this.logger.info(`request:: command: ${interaction.commandName}, user: ${interaction.user.tag}`)
@@ -69,6 +68,7 @@ export class DiscordEventService {
         }
     }
     async interactionCreate(interaction: Interaction) {
+        console.log(interaction)
         if (interaction.isStringSelectMenu()) await this.selectMenuHandler(interaction)
         else if (interaction.isChatInputCommand()) await this.commandHandler(interaction)
     }
