@@ -97,7 +97,7 @@ export class DiscordCommandService {
     }
 
     @DiscordErrorHandler(true)
-    private async searchHandler(searchTxt: string, message: Message | ChatInputCommandInteraction) {
+    private async searchHandler(searchTxt: string, payload: Message | ChatInputCommandInteraction) {
         this.logger.info('Search detected')
 
         searchTxt = searchTxt.trim()
@@ -116,19 +116,23 @@ export class DiscordCommandService {
             return [{label: title, description: title, value: url}]
         })
 
-        const selectList = await message.reply({
+        const selectList = await payload.reply({
             content: `'${searchTxt}' 검색 결과`,
             components: [{type: 1, components: [{type: 3, custom_id: 'select', options: list, placeholder: '재생할 노래 선택', max_values: 1}]}],
         })
 
-        this.discordClientService.setDeleteQueue(message.guildId || '', selectList)
+        let replyMessage: Message<boolean> | undefined = undefined
+        if (selectList instanceof Message<boolean>) replyMessage = selectList
+        else if (payload instanceof ChatInputCommandInteraction) replyMessage = await payload.fetchReply()
+
+        if (!replyMessage) throw new DiscordCommandException(this.searchHandler.name, 'cannot specify reply message object')
+        this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
     }
     @DiscordErrorHandler()
     async play(payload: Message | ChatInputCommandInteraction) {
         if (!payload.guildId) throw new DiscordCommandException(this.play.name, 'guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
-        const messageChannel = payload.channel as TextChannel
 
         let content = ''
         let voiceChannel: VoiceChannel | StageChannel | null | undefined = null
@@ -155,21 +159,20 @@ export class DiscordCommandService {
         // const voiceChannel: VoiceChannel | StageChannel | null | undefined = payload.member?.voice.channel
         this.logger.verbose(JSON.stringify(voiceChannel))
         if (!voiceChannel) {
-            const sentMessage = await messageChannel.send('You need to be in a voice channel to play music')
+            const sentMessage = await payload.reply('You need to be in a voice channel to play music')
             setTimeout(() => sentMessage.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
             return
         }
 
         const permissions = voiceChannel.permissionsFor(payload.client.user)
         if (!permissions) {
-            const sentMessage = await messageChannel.send('Permission Error')
+            const sentMessage = await payload.reply('Permission Error')
             setTimeout(() => sentMessage.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
             return
         }
         if (!permissions.has(PermissionFlagsBits.Connect) || !permissions.has(PermissionFlagsBits.Speak)) {
-            messageChannel
-                .send('I need the permissions to join and speak in your voice channel')
-                .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+            const sentMessage = await payload.reply('I need the permissions to join and speak in your voice channel')
+            setTimeout(() => sentMessage.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
             return
         }
 
@@ -198,7 +201,11 @@ export class DiscordCommandService {
 
     @DiscordErrorHandler()
     async emptyQueue(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload)) return payload.reply('You have to be in a voice channel to clear queue music')
+        if (!this.getVoiceChannelFromPayload(payload)) {
+            return payload
+                .reply('You have to be in a voice channel to clear queue music')
+                .then(msg => setTimeout(() => msg.delete, this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+        }
         if (!payload.guildId) throw new DiscordCommandException(this.emptyQueue.name, 'guild is not specified')
 
         const queue = this.discordClientService.getMusicQueue(payload.guildId)
@@ -208,8 +215,7 @@ export class DiscordCommandService {
 
         this.discordClientService.setMusicQueue(payload.guildId, [queue[0]])
         this.discordClientService.setIsPlaying(payload.guildId, false)
-        const msg = await payload.reply('queue cleared')
-        setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+        return payload.reply('queue cleared').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
     }
 
     @DiscordErrorHandler()
@@ -227,13 +233,16 @@ export class DiscordCommandService {
                 {name: 'l', value: `내보내기 => ${discordConfig.COMMAND_PREFIX}l`},
             ])
 
-        const msg = await payload.reply({embeds: [embed]})
-        setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT)
+        return payload.reply({embeds: [embed]}).then(msg => setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT))
     }
 
     @DiscordErrorHandler()
     async leave(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload)) return payload.reply('You have to be in a voice channel to make bot leave')
+        if (!this.getVoiceChannelFromPayload(payload)) {
+            return payload
+                .reply('You have to be in a voice channel to make bot leave')
+                .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+        }
         if (!payload.guildId) throw new DiscordCommandException(this.leave.name, 'guild is not specified')
 
         this.discordClientService.setMusicQueue(payload.guildId, [])
@@ -242,6 +251,7 @@ export class DiscordCommandService {
 
         this.discordClientService.getConnection(payload.guildId)?.destroy()
         this.discordClientService.deleteConnection(payload.guildId)
+        return payload.reply('bye bye ,,,').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
     }
 
     @DiscordErrorHandler()
@@ -285,5 +295,7 @@ export class DiscordCommandService {
         musicQueue.shift()
         this.discordClientService.setMusicQueue(payload.guildId, musicQueue)
         await this.discordClientService.playSong(payload)
+
+        return payload.reply('Skipping ...').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
     }
 }

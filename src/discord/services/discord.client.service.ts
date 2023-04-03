@@ -306,8 +306,11 @@ export class DiscordClientService {
     }
 
     removeFromDeleteQueue(guildId: string, id: string) {
+        console.log(guildId, id)
         const innerMap = this.deleteQueue.get(guildId)
+        console.log(innerMap)
         if (!innerMap) throw new DiscordClientException(this.removeFromDeleteQueue.name, 'data does not exist in delete queue')
+        console.log('::::::::::::::', innerMap.get(id))
         innerMap.get(id)?.delete()
         innerMap.delete(id)
         this.deleteQueue.set(guildId, innerMap)
