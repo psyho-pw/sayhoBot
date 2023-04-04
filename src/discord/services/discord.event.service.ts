@@ -42,7 +42,6 @@ export class DiscordEventService {
     private async selectMenuHandler(interaction: SelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
         const guild: Guild | undefined = this.discordClientService.getClient().guilds.cache.get(interaction.guildId ?? '')
-        console.log(guild)
         const member: GuildMember | undefined = guild?.members.cache.get(<Snowflake>interaction.member?.user.id)
         if (!guild) throw new DiscordEventException('guild is not specified')
 
@@ -63,8 +62,6 @@ export class DiscordEventService {
 
         await interaction.reply({embeds: [this.discordClientService.formatMessageEmbed(interaction.values[0], 1, musicQueue.length, song.title, song.thumbnail)]})
         setTimeout(() => interaction.deleteReply(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
-        console.log(interaction.message)
-        console.log(interaction.component)
         this.discordClientService.removeFromDeleteQueue(guild.id, interaction.message.id)
 
         if (!this.discordClientService.getIsPlaying(guild.id)) {

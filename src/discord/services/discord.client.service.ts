@@ -319,11 +319,9 @@ export class DiscordClientService {
     }
 
     removeGuildFromDeleteQueue(guildId: string) {
-        console.log(this.deleteQueue)
         const innerMap = this.deleteQueue.get(guildId)
         if (!innerMap) return
 
-        console.log(Array.from(innerMap.keys()))
         Array.from(innerMap.keys()).forEach(key => innerMap.get(key)?.delete)
         this.deleteQueue.delete(guildId)
     }
@@ -388,7 +386,6 @@ export class DiscordClientService {
         return this.discordBotClient
     }
     getUser() {
-        console.log(this.discordBotClient.user?.tag)
         return this.discordBotClient.user?.tag
     }
 
