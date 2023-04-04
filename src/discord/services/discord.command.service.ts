@@ -152,7 +152,9 @@ export class DiscordCommandService {
                 setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
                 return
             }
-            content = args[1]
+            args.shift()
+            content = args.join(' ')
+            console.log(content)
             voiceChannel = payload.member?.voice.channel
         }
 
