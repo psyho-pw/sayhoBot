@@ -28,7 +28,7 @@ export class DiscordCommandService {
     @DiscordErrorHandler(true)
     private async playlistHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message | ChatInputCommandInteraction) {
         this.logger.info('Playlist detected')
-        if (!message.guildId) throw new DiscordCommandException(this.playlistHandler.name, 'guild is not specified')
+        if (!message.guildId) throw new DiscordCommandException('guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const messageChannel = message.channel as TextChannel
@@ -65,14 +65,14 @@ export class DiscordCommandService {
             message
                 .reply('Playlist is either private or it does not exist')
                 .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
-            throw new DiscordCommandException(this.playlistHandler.name, err.message)
+            throw new DiscordCommandException(err.message)
         }
     }
 
     @DiscordErrorHandler(true)
     private async singleVidHandler(url: string, voiceChannel: VoiceChannel | StageChannel, message: Message | ChatInputCommandInteraction) {
         this.logger.info('Single video/song detected')
-        if (!message.guildId) throw new DiscordCommandException(this.singleVidHandler.name, 'guild is not specified')
+        if (!message.guildId) throw new DiscordCommandException('guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const video = await this.youtube.getVideo(url)
@@ -125,12 +125,12 @@ export class DiscordCommandService {
         if (selectList instanceof Message<boolean>) replyMessage = selectList
         else if (payload instanceof ChatInputCommandInteraction) replyMessage = await payload.fetchReply()
 
-        if (!replyMessage) throw new DiscordCommandException(this.searchHandler.name, 'cannot specify reply message object')
+        if (!replyMessage) throw new DiscordCommandException('cannot specify reply message object')
         this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
     }
     @DiscordErrorHandler()
     async play(payload: Message | ChatInputCommandInteraction) {
-        if (!payload.guildId) throw new DiscordCommandException(this.play.name, 'guild is not specified')
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
 
@@ -206,7 +206,7 @@ export class DiscordCommandService {
                 .reply('You have to be in a voice channel to clear queue music')
                 .then(msg => setTimeout(() => msg.delete, this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
         }
-        if (!payload.guildId) throw new DiscordCommandException(this.emptyQueue.name, 'guild is not specified')
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         const queue = this.discordClientService.getMusicQueue(payload.guildId)
         if (queue.length === 0) {
@@ -243,7 +243,7 @@ export class DiscordCommandService {
                 .reply('You have to be in a voice channel to make bot leave')
                 .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
         }
-        if (!payload.guildId) throw new DiscordCommandException(this.leave.name, 'guild is not specified')
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         this.discordClientService.setMusicQueue(payload.guildId, [])
         this.discordClientService.setIsPlaying(payload.guildId, false)
@@ -257,7 +257,7 @@ export class DiscordCommandService {
     @DiscordErrorHandler()
     async queue(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload)) return payload.reply('You have to be in a voice channel to see queue')
-        if (!payload.guildId) throw new DiscordCommandException(this.queue.name, 'guild is not specified')
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
         if (!musicQueue.length || musicQueue.length === 1)
@@ -278,7 +278,7 @@ export class DiscordCommandService {
             setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
             return
         }
-        if (!payload.guildId) throw new DiscordCommandException(this.skip.name, 'guild is not specified')
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         this.logger.verbose('Skipping song...')
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)

@@ -7,6 +7,7 @@ import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {AppConfigService} from '../../config/config.service'
 import {ChatInputCommandInteraction, Client, Interaction, Message, Routes, SlashCommandBuilder, VoiceState} from 'discord.js'
+import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
 @Injectable()
 export class DiscordService {
@@ -21,50 +22,58 @@ export class DiscordService {
         this.init().then(() => this.logger.verbose('✅  DiscordService instance initialized'))
     }
 
+    private registerCommands(command: string, handlerFunction: (...args: any[]) => Promise<any>) {
+        this.discordClientService.commands.set(command, (payload: Message | ChatInputCommandInteraction) => handlerFunction(payload))
+    }
+
+    @DiscordErrorHandler()
     async init() {
         await this.discordClientService.init()
 
         //commands
         const slashCommands = []
+
         const playCommand = new SlashCommandBuilder()
-            .setName('p')
+            .setName('play')
             .setDescription('Plays music with url or search parameter')
             .addStringOption(option => option.setName('input').setDescription('url or search text').setRequired(true))
         slashCommands.push(playCommand.toJSON())
-        // this.discordClientService.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-        //     this.errorHandler(() => this.discordCommandService.play(payload)),
-        // )
-
+        this.discordClientService.commands.set('p', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.play(payload))
         this.discordClientService.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.play(payload),
         )
 
-        const emptyQueueCommand = new SlashCommandBuilder().setName('eq').setDescription('Empty music queue')
+        const emptyQueueCommand = new SlashCommandBuilder().setName('empty').setDescription('Empty music queue')
         slashCommands.push(emptyQueueCommand.toJSON())
+        this.discordClientService.commands.set('eq', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.emptyQueue(payload))
         this.discordClientService.commands.set(emptyQueueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.emptyQueue(payload),
         )
 
-        const helpCommand = new SlashCommandBuilder().setName('h').setDescription('show commands')
+        const helpCommand = new SlashCommandBuilder().setName('help').setDescription('Show commands')
         slashCommands.push(helpCommand.toJSON())
+        this.discordClientService.commands.set('h', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.help(payload))
         this.discordClientService.commands.set(helpCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.help(payload),
         )
 
-        const leaveCommand = new SlashCommandBuilder().setName('l').setDescription('bot leaves voice channel')
+        const leaveCommand = new SlashCommandBuilder().setName('leave').setDescription('bot leaves voice channel')
         slashCommands.push(leaveCommand.toJSON())
+        this.discordClientService.commands.set('l', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.leave(payload))
         this.discordClientService.commands.set(leaveCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.leave(payload),
         )
 
-        const queueCommand = new SlashCommandBuilder().setName('q').setDescription('Show music queue')
+        const queueCommand = new SlashCommandBuilder().setName('queue').setDescription('Show music queue')
         slashCommands.push(queueCommand.toJSON())
+        this.discordClientService.commands.set('q', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.queue(payload))
         this.discordClientService.commands.set(queueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.queue(payload),
         )
 
-        const skipCommand = new SlashCommandBuilder().setName('s').setDescription('Skip to next music')
+        const skipCommand = new SlashCommandBuilder().setName('skip').setDescription('Skip to next music')
         slashCommands.push(skipCommand.toJSON())
+        this.discordClientService.commands.set('s', (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.skip(payload))
         this.discordClientService.commands.set(skipCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
             this.discordCommandService.skip(payload),
         )

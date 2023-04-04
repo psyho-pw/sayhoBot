@@ -5,7 +5,7 @@ import {AppConfigService} from '../../config/config.service'
 import {DiscordClientService, Song} from './discord.client.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {Client, CommandInteraction, Guild, GuildMember, Interaction, Message, SelectMenuInteraction, Snowflake, VoiceState} from 'discord.js'
+import {Channel, Client, CommandInteraction, Guild, GuildMember, Interaction, Message, SelectMenuInteraction, Snowflake, VoiceState} from 'discord.js'
 import {DiscordEventException} from '../../common/exceptions/discord/discord.event.exception'
 import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
@@ -17,9 +17,7 @@ export class DiscordEventService {
         private readonly discordClientService: DiscordClientService,
 
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-    ) {
-        // this.discordService.getClient().on('interactionCreate', this.interactionCreate)
-    }
+    ) {}
 
     @DiscordErrorHandler()
     async ready(client: Client) {
@@ -27,7 +25,7 @@ export class DiscordEventService {
         this.logger.verbose(`SayhoBot server ready`)
     }
 
-    @DiscordErrorHandler(true)
+    @DiscordErrorHandler()
     private async commandHandler(interaction: CommandInteraction) {
         const command = this.discordClientService.commands.get(interaction.commandName)
         if (!command) return
@@ -40,13 +38,13 @@ export class DiscordEventService {
         }
     }
 
-    @DiscordErrorHandler(true)
+    @DiscordErrorHandler()
     private async selectMenuHandler(interaction: SelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
         const guild: Guild | undefined = this.discordClientService.getClient().guilds.cache.get(interaction.guildId ?? '')
         console.log(guild)
         const member: GuildMember | undefined = guild?.members.cache.get(<Snowflake>interaction.member?.user.id)
-        if (!guild) throw new DiscordEventException(this.selectMenuHandler.name, 'guild is not specified')
+        if (!guild) throw new DiscordEventException('guild is not specified')
 
         if (!member || !member.voice.channel) {
             return interaction.reply('Cannot find channel')
@@ -116,12 +114,20 @@ export class DiscordEventService {
         if (!((oldState.channel?.members.size ?? 1) - 1)) {
             setTimeout(() => {
                 if (!((oldState.channel?.members.size ?? 1) - 1)) {
-                    const channel: any = oldState.client.channels.cache.filter((channel: any) => channel.name === '일반').first()
+                    const channel: any = oldState.client.channels.cache
+                        .filter((channel: Channel) => {
+                            if (!channel.isTextBased || channel.isDMBased()) return false
+                            return channel.guildId === oldState.guild.id && channel.name === '일반'
+                        })
+                        .first()
 
                     channel.send('바윙~').then((msg: Message) => {
                         this.discordClientService.setMusicQueue(newState.guild.id, [])
                         this.discordClientService.setIsPlaying(newState.guild.id, false)
                         this.discordClientService.setVolume(newState.guild.id, 1)
+                        this.discordClientService.deleteCurrentInfoMsg(newState.guild.id)
+                        this.discordClientService.removeGuildFromDeleteQueue(newState.guild.id)
+
                         this.discordClientService.deletePlayer(newState.guild.id)
                         this.discordClientService.getConnection(newState.guild.id)?.destroy()
                         this.discordClientService.deleteConnection(newState.guild.id)
