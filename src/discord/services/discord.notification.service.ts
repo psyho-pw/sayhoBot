@@ -20,7 +20,7 @@ export class DiscordNotificationService {
         if (!this.#webhookId || !this.#webhookToken) {
             const credentials = await this.httpService.axiosRef.get(config.WEBHOOK_URL)
             if (!credentials.data.id || !credentials.data.token) {
-                throw new DiscordNotificationException(this.#getCredentials.name, 'webhook credential fetch error')
+                throw new DiscordNotificationException('webhook credential fetch error', this.#getCredentials.name)
             }
 
             this.#webhookId = credentials.data.id

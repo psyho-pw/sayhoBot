@@ -84,7 +84,7 @@ export class DiscordClientService {
             this.logger.verbose('✅  DiscordBotClient instance initialized')
         } catch (err) {
             console.error(err)
-            throw new DiscordClientException(this.init.name, 'login failed')
+            throw new DiscordClientException('login failed')
         }
     }
 
@@ -132,15 +132,16 @@ export class DiscordClientService {
             player.emit('error', err)
         }
     }
+    @DiscordErrorHandler(true)
     private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId || ''
 
         const channel = message.channel as TextChannel
         const musicQueue = this.musicQueue.get(guildId)
-        if (!musicQueue) throw new DiscordClientException(this.playerOnPlayHandler.name, 'Queue does not exist')
+        if (!musicQueue) throw new DiscordClientException('Queue does not exist')
 
         const currentItem = musicQueue[0]
-        if (!currentItem) throw new DiscordClientException(this.playerOnPlayHandler.name, 'Queue item is corrupted')
+        if (!currentItem) throw new DiscordClientException('Queue item is corrupted')
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -154,16 +155,17 @@ export class DiscordClientService {
         this.logger.info(`Currently playing ${currentItem.title}`)
     }
 
+    @DiscordErrorHandler(true)
     private async playerIdleHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException(this.playerIdleHandler.name, 'guildId not specified')
+        if (!guildId) throw new DiscordClientException('guildId not specified')
 
         const channel = message.channel as TextChannel
 
         this.deleteCurrentInfoMsg(guildId)
         const musicQueue = this.musicQueue.get(guildId)
 
-        if (!musicQueue) throw new DiscordClientException(this.playerIdleHandler.name, 'Queue does not exist')
+        if (!musicQueue) throw new DiscordClientException('Queue does not exist')
 
         if (musicQueue.length > 1) {
             this.logger.debug('queue length is not zero')
@@ -190,9 +192,10 @@ export class DiscordClientService {
         }, 180000)
     }
 
+    @DiscordErrorHandler()
     private createPlayer(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException(this.createPlayer.name, 'guildId not specified')
+        if (!guildId) throw new DiscordClientException('guildId not specified')
 
         const player: AudioPlayer = createAudioPlayer()
         const channel = message.channel as TextChannel
@@ -224,9 +227,10 @@ export class DiscordClientService {
         return player
     }
 
+    @DiscordErrorHandler()
     async playSong(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException(this.playSong.name, 'guildId not specified')
+        if (!guildId) throw new DiscordClientException('guildId not specified')
 
         const channel = message.channel as TextChannel
         const musicQueue = this.musicQueue.get(guildId)
@@ -290,7 +294,7 @@ export class DiscordClientService {
             this.logger.error(err)
             await channel.send('Error occurred on player.play()')
             await channel.send(err)
-            throw new DiscordClientException(this.playSong.name, err.message)
+            throw new DiscordClientException(err.message)
         }
     }
 
@@ -301,24 +305,32 @@ export class DiscordClientService {
     }
 
     setDeleteQueue(guildId: string, message: Message | InteractionResponse) {
-        if (!guildId) throw new DiscordClientException(this.setDeleteQueue.name, 'guildId not specified')
+        if (!guildId.length) throw new DiscordClientException('guildId not specified', this.setDeleteQueue.name)
         this.deleteQueue.set(guildId, (this.deleteQueue.get(guildId) || new Map<string, Message | InteractionResponse>()).set(message.id, message))
     }
 
     removeFromDeleteQueue(guildId: string, id: string) {
-        console.log(guildId, id)
         const innerMap = this.deleteQueue.get(guildId)
-        console.log(innerMap)
-        if (!innerMap) throw new DiscordClientException(this.removeFromDeleteQueue.name, 'data does not exist in delete queue')
-        console.log('::::::::::::::', innerMap.get(id))
+        if (!innerMap) throw new DiscordClientException('data does not exist in delete queue', this.removeFromDeleteQueue.name)
+
         innerMap.get(id)?.delete()
         innerMap.delete(id)
         this.deleteQueue.set(guildId, innerMap)
     }
 
+    removeGuildFromDeleteQueue(guildId: string) {
+        console.log(this.deleteQueue)
+        const innerMap = this.deleteQueue.get(guildId)
+        if (!innerMap) return
+
+        console.log(Array.from(innerMap.keys()))
+        Array.from(innerMap.keys()).forEach(key => innerMap.get(key)?.delete)
+        this.deleteQueue.delete(guildId)
+    }
+
     getConnection(guildId: string): VoiceConnection {
         const connection = this.connection.get(guildId)
-        if (!connection) throw new DiscordClientException(this.getConnection.name, 'no such connection')
+        if (!connection) throw new DiscordClientException('no such connection', this.getConnection.name)
         return connection
     }
 
@@ -360,7 +372,7 @@ export class DiscordClientService {
 
     getPlayer(guildId: string): AudioPlayer {
         const player = this.player.get(guildId)
-        if (!player) throw new DiscordClientException(this.getPlayer.name, 'No player found')
+        if (!player) throw new DiscordClientException('No player found', this.getPlayer.name)
         return player
     }
 

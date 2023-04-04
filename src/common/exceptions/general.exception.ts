@@ -2,7 +2,7 @@ import {HttpException, HttpStatus} from '@nestjs/common'
 
 export class GeneralException extends HttpException {
     private readonly callClass: string
-    private readonly callMethod: string
+    private callMethod: string
 
     constructor(callClass: string, callMethod: string, message: string, status?: number) {
         super({callClass, callMethod, message}, status || HttpStatus.INTERNAL_SERVER_ERROR)
@@ -16,6 +16,10 @@ export class GeneralException extends HttpException {
 
     get CallMethod(): string {
         return this.callMethod
+    }
+
+    set CallMethod(value: string) {
+        this.callMethod = value
     }
 
     getCalledFrom(): string {
