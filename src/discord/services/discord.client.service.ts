@@ -135,6 +135,7 @@ export class DiscordClientService {
     @DiscordErrorHandler(true)
     private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId || ''
+        if (this.isPlaying.get(guildId)) return
 
         const channel = message.channel as TextChannel
         const musicQueue = this.musicQueue.get(guildId)
@@ -153,6 +154,8 @@ export class DiscordClientService {
         const msg = await channel.send({embeds: [embed]})
         this.currentInfoMsg.set(guildId, msg)
         this.logger.info(`Currently playing ${currentItem.title}`)
+
+        this.isPlaying.set(guildId, true)
     }
 
     @DiscordErrorHandler(true)
@@ -164,8 +167,9 @@ export class DiscordClientService {
 
         this.deleteCurrentInfoMsg(guildId)
         const musicQueue = this.musicQueue.get(guildId)
-
         if (!musicQueue) throw new DiscordClientException('Queue does not exist')
+
+        this.isPlaying.set(guildId, false)
 
         if (musicQueue.length > 1) {
             this.logger.debug('queue length is not zero')
@@ -176,7 +180,6 @@ export class DiscordClientService {
         }
 
         this.logger.debug('queue empty')
-        this.isPlaying.set(guildId, false)
         setTimeout(() => {
             if ((this.musicQueue.get(guildId) || []).length <= 1 && !this.isPlaying.get(guildId)) {
                 this.musicQueue.set(guildId, [])
@@ -288,7 +291,6 @@ export class DiscordClientService {
                 url: nextSong.url,
                 title: nextSong.title,
             })
-            this.isPlaying.set(guildId, true)
             connection.subscribe(player)
         } catch (err: any) {
             this.logger.error(err)
