@@ -64,10 +64,7 @@ export class DiscordEventService {
         setTimeout(() => interaction.deleteReply(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
         this.discordClientService.removeFromDeleteQueue(guild.id, interaction.message.id)
 
-        if (!this.discordClientService.getIsPlaying(guild.id)) {
-            this.discordClientService.setIsPlaying(guild.id, true)
-            await this.discordClientService.playSong(interaction.message)
-        }
+        if (!this.discordClientService.getIsPlaying(guild.id)) await this.discordClientService.playSong(interaction.message)
     }
     @DiscordErrorHandler()
     async interactionCreate(interaction: Interaction) {

@@ -57,10 +57,7 @@ export class DiscordCommandService {
             const reply = await message.reply({embeds: [this.discordClientService.formatMessageEmbed(url, videosObj.length, musicQueue.length, playlist.title, thumb)]})
             setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
 
-            if (!this.discordClientService.getIsPlaying(message.guildId)) {
-                this.discordClientService.setIsPlaying(message.guildId, true)
-                return this.discordClientService.playSong(message)
-            }
+            if (!this.discordClientService.getIsPlaying(message.guildId)) return this.discordClientService.playSong(message)
         } catch (err) {
             message
                 .reply('Playlist is either private or it does not exist')
@@ -90,10 +87,7 @@ export class DiscordCommandService {
         const reply = await message.reply({embeds: [this.discordClientService.formatMessageEmbed(url, 1, musicQueue.length, song.title, song.thumbnail)]})
         setTimeout(() => reply.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
 
-        if (!this.discordClientService.getIsPlaying(message.guildId)) {
-            this.discordClientService.setIsPlaying(message.guildId, true)
-            return this.discordClientService.playSong(message)
-        }
+        if (!this.discordClientService.getIsPlaying(message.guildId)) return this.discordClientService.playSong(message)
     }
 
     @DiscordErrorHandler(true)
@@ -216,7 +210,6 @@ export class DiscordCommandService {
         }
 
         this.discordClientService.setMusicQueue(payload.guildId, [queue[0]])
-        this.discordClientService.setIsPlaying(payload.guildId, false)
         return payload.reply('queue cleared').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
     }
 
@@ -296,6 +289,7 @@ export class DiscordCommandService {
 
         musicQueue.shift()
         this.discordClientService.setMusicQueue(payload.guildId, musicQueue)
+        this.discordClientService.setIsPlaying(payload.guildId, false)
         await this.discordClientService.playSong(payload)
 
         return payload.reply('Skipping ...').then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
