@@ -63,7 +63,9 @@ export class DiscordClientService {
         private readonly songService: SongService,
         private readonly discordNotificationService: DiscordNotificationService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-    ) {}
+    ) {
+        console.log(':::::::::::::::::::::::::::::::::::::::::::::::::::::::::::')
+    }
 
     @DiscordErrorHandler()
     async init() {
