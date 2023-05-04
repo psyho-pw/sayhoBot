@@ -31,11 +31,6 @@ export const configs = (): Configs => {
                     secure: 'auto',
                     sameSite: 'none',
                 },
-                // store: MongoStore.create({
-                //   dbName: 'dev-orange-db',
-                //   collectionName: 'sessionStorage',
-                //   mongoUrl: DB_URI,
-                // }),
             },
             CORS: {
                 origin: (origin, callback) => {
