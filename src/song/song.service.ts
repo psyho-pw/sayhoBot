@@ -1,9 +1,11 @@
 import {Injectable} from '@nestjs/common'
 import {InjectRepository} from '@nestjs/typeorm'
-import {Repository} from 'typeorm'
+import {Like, Repository} from 'typeorm'
 import {Song} from './entity/song.entity'
 import {Transactional} from 'typeorm-transactional'
 import {CreateSongDto} from './dto/create-song.dto'
+import {GetSongsDto} from './dto/get-songs.dto'
+import {FindOptionsWhere} from 'typeorm/find-options/FindOptionsWhere'
 
 @Injectable()
 export class SongService {
@@ -16,5 +18,15 @@ export class SongService {
         song.title = createSongDto.title
 
         return this.songRepository.save(song)
+    }
+
+    @Transactional()
+    async findAll(getSongsDto: GetSongsDto) {
+        const {searchText, page, limit} = getSongsDto
+        const whereOptions: FindOptionsWhere<Song> = {}
+        if (searchText) {
+            whereOptions.title = Like(`%${searchText}%`)
+        }
+        return this.songRepository.find({where: whereOptions, order: {id: -1}, skip: (page - 1) * limit, take: limit})
     }
 }
