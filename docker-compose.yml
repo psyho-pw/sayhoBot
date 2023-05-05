@@ -1,0 +1,19 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # only build development stage from the dockerfile
+      target: development
+    env_file:
+      - ./.env/.env.development
+    # mount host directory to the docker container
+    # mount (.) current directory to the docker container path /usr/src/app
+    # reflect file changes from host to container
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev
+    ports:
+      - 8020:8020
+
