@@ -4,16 +4,19 @@ RUN apk add --update python3 make g++ ffmpeg\
 
 ENV NODE_ENV=development
 
+RUN npm i -g pnpm
+RUN which pnpm
+
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY yarn.lock ./
+COPY pnpm-lock.yaml ./
 
-RUN yarn install
+RUN pnpm install
 
 COPY . .
 
-RUN yarn run build
+RUN pnpm run build
 
 FROM node:20.0.0-alpine as production
 RUN apk --no-cache add --update python3 make g++ ffmpeg tzdata && \
@@ -26,8 +29,8 @@ ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY yarn.lock ./
-RUN yarn install --only-production
+COPY pnpm-lock.yaml ./
+RUN pnpm install --prod
 COPY dist ./dist
 
 CMD ["node", "dist/src/main"]

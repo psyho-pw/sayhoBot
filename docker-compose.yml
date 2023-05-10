@@ -13,7 +13,7 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-    command: yarn start:dev
+    command: pnpm start:dev
     ports:
       - 8020:8020
 
