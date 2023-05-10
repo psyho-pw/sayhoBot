@@ -1,7 +1,14 @@
 import {DiscordConfig} from './config.type'
 import {Injectable} from '@nestjs/common'
 import {ConfigService} from '@nestjs/config'
-import {AppConfig, AuthConfig, AwsConfig, Configs, DBConfig, ServerConfig} from 'src/config/config.type'
+import {
+    AppConfig,
+    AuthConfig,
+    AwsConfig,
+    Configs,
+    DBConfig,
+    ServerConfig,
+} from 'src/config/config.type'
 
 @Injectable()
 export class AppConfigService {

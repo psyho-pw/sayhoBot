@@ -1,4 +1,12 @@
-import {Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject, HttpException, HttpStatus} from '@nestjs/common'
+import {
+    Injectable,
+    NestInterceptor,
+    ExecutionContext,
+    CallHandler,
+    Inject,
+    HttpException,
+    HttpStatus,
+} from '@nestjs/common'
 import {Observable, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
@@ -7,7 +15,10 @@ import {DiscordNotificationService} from '../../discord/services/discord.notific
 
 @Injectable()
 export class ErrorInterceptor implements NestInterceptor {
-    constructor(private discordService: DiscordNotificationService, @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger) {}
+    constructor(
+        private discordService: DiscordNotificationService,
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+    ) {}
 
     private curryLogger(tag: string) {
         return (data: any) => this.logger.error(tag, data)
@@ -28,11 +39,15 @@ export class ErrorInterceptor implements NestInterceptor {
                 }
 
                 if (err instanceof HttpException) {
-                    if (err.getStatus() === HttpStatus.INTERNAL_SERVER_ERROR) this.logError(context)(err)
+                    if (err.getStatus() === HttpStatus.INTERNAL_SERVER_ERROR)
+                        this.logError(context)(err)
                     const payload = err.getResponse()
                     context.switchToHttp().getResponse().status(err.getStatus())
 
-                    return of({...returnObj, ...(typeof payload === 'string' ? {message: payload} : payload)})
+                    return of({
+                        ...returnObj,
+                        ...(typeof payload === 'string' ? {message: payload} : payload),
+                    })
                 }
 
                 this.logger.error('Unhandled error occurred')
@@ -41,10 +56,15 @@ export class ErrorInterceptor implements NestInterceptor {
                 if (process.env.NODE_ENV === 'production') {
                     this.discordService
                         .sendMessage(err.message, context.getArgs()[0].route.path, [
-                            {name: 'call method', value: `${context.getClass().name}.${context.getHandler().name}`},
+                            {
+                                name: 'call method',
+                                value: `${context.getClass().name}.${context.getHandler().name}`,
+                            },
                             {name: 'stack', value: err.stack.substring(0, 1024)},
                         ])
-                        .catch(error => this.logger.error('failed to send discord message', {error}))
+                        .catch(error =>
+                            this.logger.error('failed to send discord message', {error}),
+                        )
                 }
 
                 context

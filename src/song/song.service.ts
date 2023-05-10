@@ -27,6 +27,11 @@ export class SongService {
         if (searchText) {
             whereOptions.title = Like(`%${searchText}%`)
         }
-        return this.songRepository.find({where: whereOptions, order: {id: -1}, skip: (page - 1) * limit, take: limit})
+        return this.songRepository.find({
+            where: whereOptions,
+            order: {id: -1},
+            skip: (page - 1) * limit,
+            take: limit,
+        })
     }
 }

@@ -5,7 +5,18 @@ import {AppConfigService} from '../../config/config.service'
 import {DiscordClientService, Song} from './discord.client.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {Channel, Client, CommandInteraction, Guild, GuildMember, Interaction, Message, SelectMenuInteraction, Snowflake, VoiceState} from 'discord.js'
+import {
+    Channel,
+    Client,
+    CommandInteraction,
+    Guild,
+    GuildMember,
+    Interaction,
+    Message,
+    SelectMenuInteraction,
+    Snowflake,
+    VoiceState,
+} from 'discord.js'
 import {DiscordEventException} from '../../common/exceptions/discord/discord.event.exception'
 import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 
@@ -29,20 +40,29 @@ export class DiscordEventService {
     private async commandHandler(interaction: CommandInteraction) {
         const command = this.discordClientService.commands.get(interaction.commandName)
         if (!command) return
-        this.logger.info(`request:: command: ${interaction.commandName}, user: ${interaction.user.tag}`)
+        this.logger.info(
+            `request:: command: ${interaction.commandName}, user: ${interaction.user.tag}`,
+        )
         try {
             await command(interaction)
         } catch (err) {
             if (err instanceof Error) this.logger.error(err.stack)
-            await interaction.reply({content: 'There was an error while executing this command!', ephemeral: true})
+            await interaction.reply({
+                content: 'There was an error while executing this command!',
+                ephemeral: true,
+            })
         }
     }
 
     @DiscordErrorHandler()
     private async selectMenuHandler(interaction: SelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
-        const guild: Guild | undefined = this.discordClientService.getClient().guilds.cache.get(interaction.guildId ?? '')
-        const member: GuildMember | undefined = guild?.members.cache.get(<Snowflake>interaction.member?.user.id)
+        const guild: Guild | undefined = this.discordClientService
+            .getClient()
+            .guilds.cache.get(interaction.guildId ?? '')
+        const member: GuildMember | undefined = guild?.members.cache.get(
+            <Snowflake>interaction.member?.user.id,
+        )
         if (!guild) throw new DiscordEventException('guild is not specified')
 
         if (!member || !member.voice.channel) {
@@ -60,11 +80,25 @@ export class DiscordEventService {
         this.logger.info(`${song.title} added to queue`)
         this.logger.info(`queue length: ${musicQueue.length}`)
 
-        await interaction.reply({embeds: [this.discordClientService.formatMessageEmbed(interaction.values[0], 1, musicQueue.length, song.title, song.thumbnail)]})
-        setTimeout(() => interaction.deleteReply(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+        await interaction.reply({
+            embeds: [
+                this.discordClientService.formatMessageEmbed(
+                    interaction.values[0],
+                    1,
+                    musicQueue.length,
+                    song.title,
+                    song.thumbnail,
+                ),
+            ],
+        })
+        setTimeout(
+            () => interaction.deleteReply(),
+            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+        )
         this.discordClientService.removeFromDeleteQueue(guild.id, interaction.message.id)
 
-        if (!this.discordClientService.getIsPlaying(guild.id)) await this.discordClientService.playSong(interaction.message)
+        if (!this.discordClientService.getIsPlaying(guild.id))
+            await this.discordClientService.playSong(interaction.message)
     }
     @DiscordErrorHandler()
     async interactionCreate(interaction: Interaction) {
@@ -78,11 +112,18 @@ export class DiscordEventService {
         if (message.author.bot) return
 
         if (!message.content.startsWith(this.configService.getDiscordConfig().COMMAND_PREFIX)) {
-            this.logger.verbose(`doesn't match prefix '${this.configService.getDiscordConfig().COMMAND_PREFIX}' skipping...`)
+            this.logger.verbose(
+                `doesn't match prefix '${
+                    this.configService.getDiscordConfig().COMMAND_PREFIX
+                }' skipping...`,
+            )
             return
         }
 
-        const args: string[] = message.content.slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length).trim().split(/ +/g)
+        const args: string[] = message.content
+            .slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length)
+            .trim()
+            .split(/ +/g)
         const commandName: string = args.shift()?.toLowerCase() ?? ''
         this.logger.info(`command: ${commandName}`)
 
@@ -103,7 +144,8 @@ export class DiscordEventService {
 
     @DiscordErrorHandler()
     async voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
-        if (oldState.channelId !== (oldState.guild.members.me?.voice.channelId || newState.channel)) return
+        if (oldState.channelId !== (oldState.guild.members.me?.voice.channelId || newState.channel))
+            return
 
         if (!((oldState.channel?.members.size ?? 1) - 1)) {
             setTimeout(() => {
@@ -125,7 +167,10 @@ export class DiscordEventService {
                         this.discordClientService.deletePlayer(newState.guild.id)
                         this.discordClientService.getConnection(newState.guild.id)?.destroy()
                         this.discordClientService.deleteConnection(newState.guild.id)
-                        setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT)
+                        setTimeout(
+                            () => msg.delete(),
+                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        )
                     })
                 }
             }, 5000)

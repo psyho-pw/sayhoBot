@@ -79,7 +79,9 @@ export class DiscordClientService {
 
         this.logger.verbose(generateDependencyReport())
         try {
-            this.rest = new REST({version: '10'}).setToken(this.configService.getDiscordConfig().TOKEN)
+            this.rest = new REST({version: '10'}).setToken(
+                this.configService.getDiscordConfig().TOKEN,
+            )
             await this.discordBotClient.login(this.configService.getDiscordConfig().TOKEN)
             this.logger.verbose('✅  DiscordBotClient instance initialized')
         } catch (err) {
@@ -89,15 +91,22 @@ export class DiscordClientService {
     }
 
     private formatDuration(durationObj: any) {
-        return `${durationObj.hours ? durationObj.hours + ':' : ''}${durationObj.minutes ? durationObj.minutes : '00'}:${
-            durationObj.seconds < 10 ? '0' + durationObj.seconds : durationObj.seconds ? durationObj.seconds : '00'
+        return `${durationObj.hours ? durationObj.hours + ':' : ''}${
+            durationObj.minutes ? durationObj.minutes : '00'
+        }:${
+            durationObj.seconds < 10
+                ? '0' + durationObj.seconds
+                : durationObj.seconds
+                ? durationObj.seconds
+                : '00'
         }`
     }
 
     formatVideo(video: any, voiceChannel: VoiceChannel | StageChannel): Song | null {
         if (video.title === 'Deleted video') return null
 
-        let duration: string | null = video.duration !== undefined ? this.formatDuration(video.duration) : null
+        let duration: string | null =
+            video.duration !== undefined ? this.formatDuration(video.duration) : null
         if (duration === '00:00') duration = 'Live Stream'
         return {
             url: `https://www.youtube.com/watch?v=${video.raw.id}`,
@@ -110,7 +119,13 @@ export class DiscordClientService {
         }
     }
 
-    formatMessageEmbed(url: string, queuedCount: number, queueLength: number, title: string, thumbnail: string) {
+    formatMessageEmbed(
+        url: string,
+        queuedCount: number,
+        queueLength: number,
+        title: string,
+        thumbnail: string,
+    ) {
         return new EmbedBuilder()
             .setColor('#ffffff')
             .setTitle('Queued')
@@ -118,7 +133,10 @@ export class DiscordClientService {
             .setDescription(`Queued ${queuedCount} track${queuedCount === 1 ? '' : 's'}`)
             .addFields([
                 {name: 'Total Queue', value: `${queueLength} tracks`},
-                {name: 'Track', value: `:musical_note:  ${title} :musical_note: has been added to queue`},
+                {
+                    name: 'Track',
+                    value: `:musical_note:  ${title} :musical_note: has been added to queue`,
+                },
             ])
             .setThumbnail(thumbnail)
     }
@@ -188,7 +206,12 @@ export class DiscordClientService {
 
                 channel
                     .send(`Disconnected from channel due to inactivity`)
-                    .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+                    .then(msg =>
+                        setTimeout(
+                            () => msg.delete(),
+                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        ),
+                    )
                 this.connection.get(guildId)?.destroy()
                 this.connection.delete(guildId)
             }
@@ -204,8 +227,12 @@ export class DiscordClientService {
         const channel = message.channel as TextChannel
 
         player
-            .on(AudioPlayerStatus.Playing, () => this.playerWrapper(() => this.playerOnPlayHandler(message), guildId))
-            .on(AudioPlayerStatus.Idle, () => this.playerWrapper(() => this.playerIdleHandler(message), guildId))
+            .on(AudioPlayerStatus.Playing, () =>
+                this.playerWrapper(() => this.playerOnPlayHandler(message), guildId),
+            )
+            .on(AudioPlayerStatus.Idle, () =>
+                this.playerWrapper(() => this.playerIdleHandler(message), guildId),
+            )
             .on('error', async err => {
                 this.logger.error('fatal error occurred')
                 const musicQueue = this.musicQueue.get(guildId)
@@ -217,7 +244,12 @@ export class DiscordClientService {
                 if (err.message === 'Status code: 410') {
                     return channel
                         .send(`Unplayable Song: ${musicQueue[0].title}`)
-                        .then(msg => setTimeout(() => msg.delete(), this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT))
+                        .then(msg =>
+                            setTimeout(
+                                () => msg.delete(),
+                                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                            ),
+                        )
                 }
 
                 await channel.send('\n' + 'fatal error occurred')
@@ -261,11 +293,14 @@ export class DiscordClientService {
             this.logger.error(error)
         })
 
-        const resource: AudioResource = createAudioResource(stream, {inputType: StreamType.Arbitrary})
+        const resource: AudioResource = createAudioResource(stream, {
+            inputType: StreamType.Arbitrary,
+        })
         let connection = this.connection.get(guildId)
 
         if (!connection) {
-            if (!message.guild) return channel.send(`Error occurred on joining voice channel\nguild is not defined`)
+            if (!message.guild)
+                return channel.send(`Error occurred on joining voice channel\nguild is not defined`)
 
             connection = joinVoiceChannel({
                 channelId: musicQueue[0].voiceChannel.id,
@@ -307,13 +342,24 @@ export class DiscordClientService {
     }
 
     setDeleteQueue(guildId: string, message: Message | InteractionResponse) {
-        if (!guildId.length) throw new DiscordClientException('guildId not specified', this.setDeleteQueue.name)
-        this.deleteQueue.set(guildId, (this.deleteQueue.get(guildId) || new Map<string, Message | InteractionResponse>()).set(message.id, message))
+        if (!guildId.length)
+            throw new DiscordClientException('guildId not specified', this.setDeleteQueue.name)
+        this.deleteQueue.set(
+            guildId,
+            (this.deleteQueue.get(guildId) || new Map<string, Message | InteractionResponse>()).set(
+                message.id,
+                message,
+            ),
+        )
     }
 
     removeFromDeleteQueue(guildId: string, id: string) {
         const innerMap = this.deleteQueue.get(guildId)
-        if (!innerMap) throw new DiscordClientException('data does not exist in delete queue', this.removeFromDeleteQueue.name)
+        if (!innerMap)
+            throw new DiscordClientException(
+                'data does not exist in delete queue',
+                this.removeFromDeleteQueue.name,
+            )
 
         innerMap.get(id)?.delete()
         innerMap.delete(id)
@@ -330,7 +376,8 @@ export class DiscordClientService {
 
     getConnection(guildId: string): VoiceConnection {
         const connection = this.connection.get(guildId)
-        if (!connection) throw new DiscordClientException('no such connection', this.getConnection.name)
+        if (!connection)
+            throw new DiscordClientException('no such connection', this.getConnection.name)
         return connection
     }
 

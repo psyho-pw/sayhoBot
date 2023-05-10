@@ -1,5 +1,5 @@
 // import type {User} from 'src/user/entities/user.entity'
-import {CreateDateColumn, DeleteDateColumn, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Relation, UpdateDateColumn} from 'typeorm'
+import {CreateDateColumn, DeleteDateColumn, PrimaryGeneratedColumn, UpdateDateColumn} from 'typeorm'
 
 export abstract class AbstractEntity {
     @PrimaryGeneratedColumn()

@@ -10,7 +10,13 @@ import {SongModule} from '../song/song.module'
 
 @Module({
     imports: [HttpModule, SongModule],
-    providers: [DiscordService, DiscordClientService, DiscordCommandService, DiscordEventService, DiscordNotificationService],
+    providers: [
+        DiscordService,
+        DiscordClientService,
+        DiscordCommandService,
+        DiscordEventService,
+        DiscordNotificationService,
+    ],
     exports: [DiscordService, DiscordNotificationService],
 })
 export class DiscordModule {}
