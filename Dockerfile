@@ -24,6 +24,8 @@ RUN apk --no-cache add --update python3 make g++ ffmpeg tzdata && \
     echo "Asia/Seoul" > /etc/timezone \
     apk del tzdata
 
+RUN npm i -g pnpm
+
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
