@@ -16,8 +16,10 @@ COPY . .
 RUN yarn run build
 
 FROM node:20.0.0-alpine as production
-RUN apk add --update python3 make g++ ffmpeg\
-   && rm -rf /var/cache/apk/*
+RUN apk --no-cache add --update python3 make g++ ffmpeg tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone \
+    apk del tzdata
 
 ENV NODE_ENV=production
 
