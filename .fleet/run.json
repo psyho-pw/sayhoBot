@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "type": "docker-compose-up",
+            "name": "Docker-compose",
+            "files": [
+                "docker-compose.yml"
+            ],
+            "upOptions": "--build -V"
+        }
+    ]
+}
