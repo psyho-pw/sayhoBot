@@ -23,10 +23,10 @@ import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.d
 @Injectable()
 export class DiscordEventService {
     private readonly youtube = new Youtube(this.configService.getDiscordConfig().YOUTUBE_API_KEY)
+
     constructor(
         private readonly configService: AppConfigService,
         private readonly discordClientService: DiscordClientService,
-
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
@@ -100,6 +100,7 @@ export class DiscordEventService {
         if (!this.discordClientService.getIsPlaying(guild.id))
             await this.discordClientService.playSong(interaction.message)
     }
+
     @DiscordErrorHandler()
     async interactionCreate(interaction: Interaction) {
         if (interaction.isStringSelectMenu()) await this.selectMenuHandler(interaction)

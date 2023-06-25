@@ -22,6 +22,7 @@ import {DiscordNotificationService} from './discord.notification.service'
 @Injectable()
 export class DiscordCommandService {
     private readonly youtube = new Youtube(this.configService.getDiscordConfig().YOUTUBE_API_KEY)
+
     constructor(
         private readonly configService: AppConfigService,
         private readonly discordClientService: DiscordClientService,
@@ -199,6 +200,7 @@ export class DiscordCommandService {
         if (!replyMessage) throw new DiscordCommandException('cannot specify reply message object')
         this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
     }
+
     @DiscordErrorHandler()
     async play(payload: Message | ChatInputCommandInteraction) {
         if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
