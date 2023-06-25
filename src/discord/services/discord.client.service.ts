@@ -28,7 +28,7 @@ import {AppConfigService} from '../../config/config.service'
 import {HttpService} from '@nestjs/axios'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import ytdl from 'ytdl-core'
+import ytdl from '@distube/ytdl-core'
 import {DiscordClientException} from '../../common/exceptions/discord/discord.client.exception'
 import {SongService} from '../../song/song.service'
 import {DiscordNotificationService} from './discord.notification.service'
@@ -150,6 +150,7 @@ export class DiscordClientService {
             player.emit('error', err)
         }
     }
+
     @DiscordErrorHandler(true)
     private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId || ''
@@ -434,6 +435,7 @@ export class DiscordClientService {
     getClient() {
         return this.discordBotClient
     }
+
     getUser() {
         return this.discordBotClient.user?.tag
     }
