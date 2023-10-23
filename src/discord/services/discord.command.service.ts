@@ -7,6 +7,7 @@ import {AppConfigService} from '../../config/config.service'
 import {
     ChatInputCommandInteraction,
     EmbedBuilder,
+    InteractionResponse,
     Message,
     PermissionFlagsBits,
     StageChannel,
@@ -174,7 +175,7 @@ export class DiscordCommandService {
             return [{label: title, description: title, value: url}]
         })
 
-        const selectList = await payload.reply({
+        const selectList: Message | InteractionResponse = await payload.reply({
             content: `'${searchTxt}' 검색 결과`,
             components: [
                 {
@@ -193,7 +194,7 @@ export class DiscordCommandService {
         })
 
         let replyMessage: Message<boolean> | undefined = undefined
-        if (selectList instanceof Message<boolean>) replyMessage = selectList
+        if (selectList instanceof Message) replyMessage = selectList
         else if (payload instanceof ChatInputCommandInteraction)
             replyMessage = await payload.fetchReply()
 
