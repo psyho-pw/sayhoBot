@@ -235,7 +235,7 @@ export class DiscordClientService {
                 this.playerWrapper(() => this.playerIdleHandler(message), guildId),
             )
             .on('error', async err => {
-                this.logger.error('fatal error occurred')
+                this.logger.error('fatal error occurred', err)
                 const musicQueue = this.musicQueue.get(guildId)
                 this.isPlaying.set(guildId, false)
                 this.deleteCurrentInfoMsg(guildId)
