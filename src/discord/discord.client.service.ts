@@ -252,7 +252,16 @@ export class DiscordClientService {
                 this.isPlaying.set(guildId, false)
                 this.deleteCurrentInfoMsg(guildId)
 
-                if (!musicQueue) return channel.send('Queue does not exist')
+                if (!musicQueue) {
+                    return channel
+                        .send('Queue does not exist')
+                        .then(msg =>
+                            setTimeout(
+                                () => msg.delete(),
+                                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                            ),
+                        )
+                }
 
                 if (err.message === 'Status code: 410') {
                     return channel
@@ -265,7 +274,15 @@ export class DiscordClientService {
                         )
                 }
 
-                await channel.send('fatal error occurred, skipping ,,')
+                await channel
+                    .send('fatal error occurred, skipping ,,')
+                    .then(msg =>
+                        setTimeout(
+                            () => msg.delete(),
+                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        ),
+                    )
+
                 const exception = new DiscordClientException(err.message, 'player')
                 exception.stack = err.stack
                 await this.discordNotificationService.sendErrorReport(exception)
