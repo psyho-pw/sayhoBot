@@ -5,7 +5,6 @@ import {DiscordEventService} from './discord.event.service'
 import {DiscordNotificationService} from './discord.notification.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {AppConfigService} from '../../config/config.service'
 import {
     ChatInputCommandInteraction,
     Client,
@@ -15,7 +14,8 @@ import {
     SlashCommandBuilder,
     VoiceState,
 } from 'discord.js'
-import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
+import {AppConfigService} from '../config/config.service'
+import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
 
 @Injectable()
 export class DiscordService {
@@ -30,6 +30,7 @@ export class DiscordService {
         this.init().then(() => this.logger.verbose('✅  DiscordService instance initialized'))
     }
 
+    //TODO: make register method
     private registerCommands(command: string, handlerFunction: (...args: any[]) => Promise<any>) {
         this.discordClientService.commands.set(
             command,
@@ -37,8 +38,8 @@ export class DiscordService {
         )
     }
 
-    @DiscordErrorHandler()
-    async init() {
+    @HandleDiscordError()
+    private async init() {
         await this.discordClientService.init()
 
         //commands
@@ -60,6 +61,21 @@ export class DiscordService {
             playCommand.name.toLowerCase(),
             (payload: Message | ChatInputCommandInteraction) =>
                 this.discordCommandService.play(payload),
+        )
+
+        const shuffleCommand = new SlashCommandBuilder()
+            .setName('shuffle')
+            .setDescription('Shuffle songs currently available in queue')
+        slashCommands.push(shuffleCommand.toJSON())
+        this.discordClientService.commands.set(
+            'sh',
+            (payload: Message | ChatInputCommandInteraction) =>
+                this.discordCommandService.shuffle(payload),
+        )
+        this.discordClientService.commands.set(
+            shuffleCommand.name.toLowerCase(),
+            (payload: Message | ChatInputCommandInteraction) =>
+                this.discordCommandService.shuffle(payload),
         )
 
         const emptyQueueCommand = new SlashCommandBuilder()

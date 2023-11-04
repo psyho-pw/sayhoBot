@@ -3,7 +3,6 @@ import Youtube from 'simple-youtube-api'
 import {Inject, Injectable} from '@nestjs/common'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {AppConfigService} from '../../config/config.service'
 import {
     ChatInputCommandInteraction,
     EmbedBuilder,
@@ -15,10 +14,11 @@ import {
     VoiceChannel,
 } from 'discord.js'
 import {DiscordClientService, Song} from './discord.client.service'
-import {DiscordCommandException} from '../../common/exceptions/discord/discord.command.exception'
 import {APIEmbedField} from 'discord-api-types/v10'
-import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
 import {DiscordNotificationService} from './discord.notification.service'
+import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
+import {DiscordCommandException} from '../common/exceptions/discord/discord.command.exception'
+import {AppConfigService} from '../config/config.service'
 
 @Injectable()
 export class DiscordCommandService {
@@ -37,7 +37,7 @@ export class DiscordCommandService {
             : payload.guild?.members.cache.get(payload.member?.user.id || '')?.voice.channel
     }
 
-    @DiscordErrorHandler(true)
+    @HandleDiscordError(true)
     private async playlistHandler(
         url: string,
         voiceChannel: VoiceChannel | StageChannel,
@@ -108,7 +108,7 @@ export class DiscordCommandService {
         }
     }
 
-    @DiscordErrorHandler(true)
+    @HandleDiscordError(true)
     private async singleVidHandler(
         url: string,
         voiceChannel: VoiceChannel | StageChannel,
@@ -155,7 +155,7 @@ export class DiscordCommandService {
             return this.discordClientService.playSong(message)
     }
 
-    @DiscordErrorHandler(true)
+    @HandleDiscordError(true)
     private async searchHandler(searchTxt: string, payload: Message | ChatInputCommandInteraction) {
         this.logger.info('Search detected')
 
@@ -202,8 +202,8 @@ export class DiscordCommandService {
         this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
     }
 
-    @DiscordErrorHandler()
-    async play(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async play(payload: Message | ChatInputCommandInteraction) {
         if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
@@ -301,8 +301,8 @@ export class DiscordCommandService {
         }
     }
 
-    @DiscordErrorHandler()
-    async emptyQueue(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async emptyQueue(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload)) {
             return payload
                 .reply('You have to be in a voice channel to clear queue music')
@@ -338,8 +338,8 @@ export class DiscordCommandService {
             )
     }
 
-    @DiscordErrorHandler()
-    async help(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async help(payload: Message | ChatInputCommandInteraction) {
         const discordConfig = await this.configService.getDiscordConfig()
         const embed: EmbedBuilder = new EmbedBuilder()
             .setColor('#ffffff')
@@ -358,8 +358,8 @@ export class DiscordCommandService {
             .then(msg => setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT))
     }
 
-    @DiscordErrorHandler()
-    async leave(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async leave(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload)) {
             return payload
                 .reply('You have to be in a voice channel to make bot leave')
@@ -388,8 +388,8 @@ export class DiscordCommandService {
             )
     }
 
-    @DiscordErrorHandler()
-    async queue(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async queue(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload))
             return payload.reply('You have to be in a voice channel to see queue')
         if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
@@ -426,8 +426,8 @@ export class DiscordCommandService {
             )
     }
 
-    @DiscordErrorHandler()
-    async skip(payload: Message | ChatInputCommandInteraction) {
+    @HandleDiscordError()
+    public async skip(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload)) {
             const reply = await payload.reply('You have to be in a voice channel to see queue')
             setTimeout(
@@ -460,6 +460,22 @@ export class DiscordCommandService {
 
         return payload
             .reply('Skipping ...')
+            .then(msg =>
+                setTimeout(
+                    () => msg.delete(),
+                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                ),
+            )
+    }
+
+    @HandleDiscordError()
+    public async shuffle(payload: Message | ChatInputCommandInteraction) {
+        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+
+        this.discordClientService.shuffleMusicQueue(payload.guildId)
+
+        return payload
+            .reply('Queue shuffled')
             .then(msg =>
                 setTimeout(
                     () => msg.delete(),

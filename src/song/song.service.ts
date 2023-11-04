@@ -12,7 +12,7 @@ export class SongService {
     constructor(@InjectRepository(Song) private songRepository: Repository<Song>) {}
 
     @Transactional()
-    async create(createSongDto: CreateSongDto): Promise<Song> {
+    public async create(createSongDto: CreateSongDto): Promise<Song> {
         const song = new Song()
         song.url = createSongDto.url
         song.title = createSongDto.title
@@ -21,7 +21,7 @@ export class SongService {
     }
 
     @Transactional()
-    async findAll(getSongsDto: GetSongsDto) {
+    public async findAll(getSongsDto: GetSongsDto) {
         const {searchText, page, limit} = getSongsDto
         const whereOptions: FindOptionsWhere<Song> = {}
         if (searchText) {

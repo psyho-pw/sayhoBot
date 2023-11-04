@@ -11,7 +11,7 @@ import {Observable, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {DiscordNotificationService} from '../../discord/services/discord.notification.service'
+import {DiscordNotificationService} from 'src/discord/discord.notification.service'
 
 @Injectable()
 export class ErrorInterceptor implements NestInterceptor {
