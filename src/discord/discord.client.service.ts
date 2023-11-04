@@ -242,7 +242,12 @@ export class DiscordClientService {
                 this.playerWrapper(() => this.playerIdleHandler(message), guildId),
             )
             .on('error', async err => {
-                this.logger.error('fatal error occurred', err)
+                this.logger.error('fatal error occurred', {
+                    name: err.name,
+                    message: err.message,
+                    stack: err.stack,
+                })
+
                 const musicQueue = this.musicQueue.get(guildId)
                 this.isPlaying.set(guildId, false)
                 this.deleteCurrentInfoMsg(guildId)
@@ -260,11 +265,10 @@ export class DiscordClientService {
                         )
                 }
 
-                await channel.send('\n' + 'fatal error occurred')
-                this.connection.get(guildId)?.destroy()
-                this.connection.delete(guildId)
-
-                await this.discordNotificationService.sendErrorReport(err)
+                await channel.send('fatal error occurred, skipping ,,')
+                const exception = new DiscordClientException(err.message, 'player')
+                exception.stack = err.stack
+                await this.discordNotificationService.sendErrorReport(exception)
             })
 
         return player
@@ -297,8 +301,9 @@ export class DiscordClientService {
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
-        }).on('error', (error: any) => {
-            this.logger.error(error)
+        }).on('error', async (error: any) => {
+            this.logger.error('ytdl create readable stream error', error)
+            await this.discordNotificationService.sendErrorReport(error)
         })
 
         const resource: AudioResource = createAudioResource(stream, {
@@ -334,7 +339,6 @@ export class DiscordClientService {
         } catch (err: any) {
             this.logger.error(err)
             await channel.send('Error occurred on player.play()')
-            this.logger.error(err)
             throw new DiscordClientException(err.message)
         } finally {
             await this.songService.create({url: nextSong.url, title: nextSong.title})
