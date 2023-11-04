@@ -5,8 +5,8 @@ import {HttpService} from '@nestjs/axios'
 import {EmbedBuilder, WebhookClient} from 'discord.js'
 import {APIEmbedField} from 'discord-api-types/v10'
 import {AppConfigService} from 'src/config/config.service'
-import {DiscordNotificationException} from '../../common/exceptions/discord/discord.notification.exception'
-import {GeneralException} from '../../common/exceptions/general.exception'
+import {DiscordNotificationException} from '../common/exceptions/discord/discord.notification.exception'
+import {GeneralException} from '../common/exceptions/general.exception'
 
 @Injectable()
 export class DiscordNotificationService {
@@ -14,7 +14,7 @@ export class DiscordNotificationService {
     #webhookId: string
     #webhookToken: string
 
-    async #getCredentials() {
+    private async getCredentials() {
         const config = this.configService.getDiscordConfig()
 
         if (!this.#webhookId || !this.#webhookToken) {
@@ -22,7 +22,7 @@ export class DiscordNotificationService {
             if (!credentials.data.id || !credentials.data.token) {
                 throw new DiscordNotificationException(
                     'webhook credential fetch error',
-                    this.#getCredentials.name,
+                    this.getCredentials.name,
                 )
             }
 
@@ -36,17 +36,17 @@ export class DiscordNotificationService {
         private readonly httpService: HttpService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
-        this.#getCredentials()
+        this.getCredentials()
             .then(() => this.logger.verbose('✅  DiscordNotificationModule instance initialized'))
             .catch(error => this.logger.error('error caught', error))
     }
 
-    async sendMessage(
+    public async sendMessage(
         message: string,
         title?: string,
         additional?: Array<APIEmbedField>,
     ): Promise<void> {
-        await this.#getCredentials()
+        await this.getCredentials()
         if (!this.#webhookClient)
             this.#webhookClient = new WebhookClient({
                 id: this.#webhookId,
@@ -63,7 +63,7 @@ export class DiscordNotificationService {
         await this.#webhookClient.send({embeds: [embed]})
     }
 
-    async sendErrorReport(err: any) {
+    public async sendErrorReport(err: any) {
         if (err instanceof GeneralException) {
             await this.sendMessage(err.message, err.getCalledFrom(), [
                 {name: 'stack', value: (err.stack || '').substring(0, 1024)},

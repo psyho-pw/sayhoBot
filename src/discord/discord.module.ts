@@ -1,12 +1,11 @@
 import {Module} from '@nestjs/common'
-
 import {HttpModule} from '@nestjs/axios'
-import {DiscordNotificationService} from './services/discord.notification.service'
-import {DiscordClientService} from './services/discord.client.service'
-import {DiscordCommandService} from './services/discord.command.service'
-import {DiscordEventService} from './services/discord.event.service'
-import {DiscordService} from './services/discord.service'
 import {SongModule} from '../song/song.module'
+import {DiscordService} from './discord.service'
+import {DiscordClientService} from './discord.client.service'
+import {DiscordCommandService} from './discord.command.service'
+import {DiscordEventService} from './discord.event.service'
+import {DiscordNotificationService} from './discord.notification.service'
 
 @Module({
     imports: [HttpModule, SongModule],

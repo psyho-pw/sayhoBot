@@ -1,8 +1,8 @@
-import {DiscordNotificationService} from '../../discord/services/discord.notification.service'
+import {DiscordNotificationService} from 'src/discord/discord.notification.service'
 import {Inject} from '@nestjs/common'
 import {GeneralException} from '../exceptions/general.exception'
 
-export function DiscordErrorHandler(bubble = false) {
+export function HandleDiscordError(bubble = false) {
     const injectNotification = Inject(DiscordNotificationService)
 
     return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {

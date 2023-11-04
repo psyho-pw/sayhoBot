@@ -1,7 +1,6 @@
 // @ts-ignore
 import Youtube from 'simple-youtube-api/src/index.js'
 import {Inject, Injectable} from '@nestjs/common'
-import {AppConfigService} from '../../config/config.service'
 import {DiscordClientService, Song} from './discord.client.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
@@ -17,8 +16,9 @@ import {
     Snowflake,
     VoiceState,
 } from 'discord.js'
-import {DiscordEventException} from '../../common/exceptions/discord/discord.event.exception'
-import {DiscordErrorHandler} from '../../common/decorators/discordErrorHandler.decorator'
+import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
+import {DiscordEventException} from '../common/exceptions/discord/discord.event.exception'
+import {AppConfigService} from '../config/config.service'
 
 @Injectable()
 export class DiscordEventService {
@@ -30,13 +30,13 @@ export class DiscordEventService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
-    @DiscordErrorHandler()
-    async ready(client: Client) {
+    @HandleDiscordError()
+    public async ready(client: Client) {
         this.logger.verbose(`Logged in as ${this.discordClientService.getUser()}`)
         this.logger.verbose(`SayhoBot server ready`)
     }
 
-    @DiscordErrorHandler()
+    @HandleDiscordError()
     private async commandHandler(interaction: CommandInteraction) {
         const command = this.discordClientService.commands.get(interaction.commandName)
         if (!command) return
@@ -54,7 +54,7 @@ export class DiscordEventService {
         }
     }
 
-    @DiscordErrorHandler()
+    @HandleDiscordError()
     private async selectMenuHandler(interaction: SelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
         const guild: Guild | undefined = this.discordClientService
@@ -101,14 +101,14 @@ export class DiscordEventService {
             await this.discordClientService.playSong(interaction.message)
     }
 
-    @DiscordErrorHandler()
-    async interactionCreate(interaction: Interaction) {
+    @HandleDiscordError()
+    public async interactionCreate(interaction: Interaction) {
         if (interaction.isStringSelectMenu()) await this.selectMenuHandler(interaction)
         else if (interaction.isChatInputCommand()) await this.commandHandler(interaction)
     }
 
-    @DiscordErrorHandler()
-    async messageCreate(message: Message) {
+    @HandleDiscordError()
+    public async messageCreate(message: Message) {
         this.logger.info(`message received ${message.content}`)
         if (message.author.bot) return
 
@@ -143,8 +143,8 @@ export class DiscordEventService {
         }
     }
 
-    @DiscordErrorHandler()
-    async voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
+    @HandleDiscordError()
+    public async voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
         if (oldState.channelId !== (oldState.guild.members.me?.voice.channelId || newState.channel))
             return
 
