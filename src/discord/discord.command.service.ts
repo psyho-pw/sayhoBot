@@ -177,7 +177,7 @@ export class DiscordCommandService {
         const list = results.flatMap((item): SelectListItem[] => {
             const selectListItem = new SelectListItem()
             selectListItem.label = item.title.slice(0, 100)
-            selectListItem.description = item.description
+            selectListItem.description = item.description.slice(0, 100)
             selectListItem.value = item.url
 
             return [selectListItem]
