@@ -1,7 +1,7 @@
 // @ts-ignore
 import Youtube from 'simple-youtube-api/src/index.js'
 import {Inject, Injectable} from '@nestjs/common'
-import {DiscordClientService, Song} from './discord.client.service'
+import {DiscordClientService} from './discord.client.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {
@@ -19,10 +19,14 @@ import {
 import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
 import {DiscordEventException} from '../common/exceptions/discord/discord.event.exception'
 import {AppConfigService} from '../config/config.service'
+import {Song} from './discord.model'
+import {SimpleYoutubeAPI} from './discord.type'
 
 @Injectable()
 export class DiscordEventService {
-    private readonly youtube = new Youtube(this.configService.getDiscordConfig().YOUTUBE_API_KEY)
+    private readonly youtube: SimpleYoutubeAPI = new Youtube(
+        this.configService.getDiscordConfig().YOUTUBE_API_KEY,
+    )
 
     constructor(
         private readonly configService: AppConfigService,
@@ -63,11 +67,10 @@ export class DiscordEventService {
         const member: GuildMember | undefined = guild?.members.cache.get(
             <Snowflake>interaction.member?.user.id,
         )
-        if (!guild) throw new DiscordEventException('guild is not specified')
 
-        if (!member || !member.voice.channel) {
-            return interaction.reply('Cannot find channel')
-        }
+        if (!guild) throw new DiscordEventException('guild is not specified')
+        if (!member || !member.voice.channel) return interaction.reply('Cannot find channel')
+
         const song: Song | null = this.discordClientService.formatVideo(video, member.voice.channel)
         if (!song) {
             return interaction.reply('Video is either private or it does not exist')
@@ -80,25 +83,29 @@ export class DiscordEventService {
         this.logger.info(`${song.title} added to queue`)
         this.logger.info(`queue length: ${musicQueue.length}`)
 
-        await interaction.reply({
-            embeds: [
-                this.discordClientService.formatMessageEmbed(
-                    interaction.values[0],
-                    1,
-                    musicQueue.length,
-                    song.title,
-                    song.thumbnail,
+        await interaction
+            .reply({
+                embeds: [
+                    this.discordClientService.formatMessageEmbed(
+                        interaction.values[0],
+                        1,
+                        musicQueue.length,
+                        song.title,
+                        song.thumbnail,
+                    ),
+                ],
+            })
+            .then(msg =>
+                setTimeout(
+                    () => msg.delete(),
+                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
                 ),
-            ],
-        })
-        setTimeout(
-            () => interaction.deleteReply(),
-            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-        )
+            )
         this.discordClientService.removeFromDeleteQueue(guild.id, interaction.message.id)
 
-        if (!this.discordClientService.getIsPlaying(guild.id))
+        if (!this.discordClientService.getIsPlaying(guild.id)) {
             await this.discordClientService.playSong(interaction.message)
+        }
     }
 
     @HandleDiscordError()

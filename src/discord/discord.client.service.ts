@@ -33,16 +33,8 @@ import {AppConfigService} from '../config/config.service'
 import {SongService} from '../song/song.service'
 import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
 import {DiscordClientException} from '../common/exceptions/discord/discord.client.exception'
-
-export type Song = {
-    url: string
-    title: string
-    duration: string | null
-    thumbnail: string
-    voiceChannel: VoiceChannel | StageChannel
-    video: any
-    videoId: string
-}
+import {Song} from './discord.model'
+import {Video} from './discord.type'
 
 @Injectable()
 export class DiscordClientService {
@@ -109,21 +101,23 @@ export class DiscordClientService {
         }`
     }
 
-    public formatVideo(video: any, voiceChannel: VoiceChannel | StageChannel): Song | null {
+    public formatVideo(video: Video, voiceChannel: VoiceChannel | StageChannel): Song | null {
         if (video.title === 'Deleted video') return null
 
         let duration: string | null =
             video.duration !== undefined ? this.formatDuration(video.duration) : null
         if (duration === '00:00') duration = 'Live Stream'
-        return {
-            url: `https://www.youtube.com/watch?v=${video.raw.id}`,
-            title: video.raw.snippet.title,
-            duration,
-            thumbnail: video.thumbnails.high.url,
-            voiceChannel,
-            video: video,
-            videoId: video.raw.id,
-        }
+
+        const song = new Song()
+        song.url = video.url
+        song.title = video.raw.snippet.title
+        song.duration = duration
+        song.thumbnail = video.thumbnails.high.url
+        song.voiceChannel = voiceChannel
+        song.video = video
+        song.videoId = video.raw.id
+
+        return song
     }
 
     public formatMessageEmbed(
