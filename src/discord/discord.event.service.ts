@@ -12,7 +12,7 @@ import {
     GuildMember,
     Interaction,
     Message,
-    SelectMenuInteraction,
+    StringSelectMenuInteraction,
     Snowflake,
     VoiceState,
 } from 'discord.js'
@@ -59,7 +59,7 @@ export class DiscordEventService {
     }
 
     @HandleDiscordError()
-    private async selectMenuHandler(interaction: SelectMenuInteraction) {
+    private async selectMenuHandler(interaction: StringSelectMenuInteraction) {
         const video = await this.youtube.getVideo(interaction.values[0])
         const guild: Guild | undefined = this.discordClientService
             .getClient()

@@ -20,7 +20,7 @@ import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decor
 import {DiscordCommandException} from '../common/exceptions/discord/discord.command.exception'
 import {AppConfigService} from '../config/config.service'
 import {ParsedPlayCommand, SelectListItem, Song} from './discord.model'
-import {PlayList, SimpleYoutubeAPI, Video} from './discord.type'
+import {SimpleYoutubeAPI} from './discord.type'
 
 @Injectable()
 export class DiscordCommandService {
@@ -216,17 +216,22 @@ export class DiscordCommandService {
     ): Promise<ParsedPlayCommand | null> {
         if (payload instanceof ChatInputCommandInteraction) {
             const content = payload.options.getString('input') ?? ''
-
             if (!content.length) {
-                const msg = await payload.reply(`parameter count doesn't match`)
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                )
+                await payload
+                    .reply(`parameter count doesn't match`)
+                    .then(msg =>
+                        setTimeout(
+                            () => msg.delete(),
+                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        ),
+                    )
+
                 return null
             }
+
             const member = payload.guild?.members.cache.get(payload.member?.user.id || '')
             if (!member) return null
+
             const voiceChannel = member.voice.channel
             if (!voiceChannel) return null
 
@@ -238,11 +243,15 @@ export class DiscordCommandService {
             .trim()
             .split(/ +/g)
         if (args.length < 2) {
-            const msg = await payload.reply(`parameter count doesn't match`)
-            setTimeout(
-                () => msg.delete(),
-                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-            )
+            await payload
+                .reply(`parameter count doesn't match`)
+                .then(msg =>
+                    setTimeout(
+                        () => msg.delete(),
+                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                    ),
+                )
+
             return null
         }
 
@@ -263,7 +272,7 @@ export class DiscordCommandService {
 
         const parsedCommand = await this.parsePlayCommand(payload)
         if (!parsedCommand) {
-            return await payload
+            return payload
                 .reply('You need to be in a voice channel to play music')
                 .then(msg =>
                     setTimeout(
@@ -278,7 +287,7 @@ export class DiscordCommandService {
 
         const permissions = voiceChannel.permissionsFor(payload.client.user)
         if (!permissions) {
-            return await payload
+            return payload
                 .reply('Permission Error')
                 .then(msg =>
                     setTimeout(
@@ -293,7 +302,7 @@ export class DiscordCommandService {
             permissions.has(PermissionFlagsBits.Speak)
 
         if (!hasPermission) {
-            return await payload
+            return payload
                 .reply('I need the permissions to join and speak in your voice channel')
                 .then(msg =>
                     setTimeout(
@@ -354,6 +363,7 @@ export class DiscordCommandService {
         }
 
         this.discordClientService.setMusicQueue(payload.guildId, [queue[0]])
+
         return payload
             .reply('queue cleared')
             .then(msg =>
