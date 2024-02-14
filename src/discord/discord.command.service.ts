@@ -68,7 +68,7 @@ export class DiscordCommandService {
 
             for (const video of videos) {
                 //TODO type Video.raw
-                if (video.raw.status.privacyStatus === 'private') continue
+                if (video.raw.status['privacyStatus'] === 'private') continue
 
                 const song: Song | null = this.discordClientService.formatVideo(video, voiceChannel)
                 if (song) {
@@ -172,7 +172,7 @@ export class DiscordCommandService {
         searchTxt = searchTxt.trim()
         this.logger.debug(`searchTxt: ${searchTxt}`)
         const results = await this.youtube.searchVideos(searchTxt, 10)
-        //TODO assert type of simple-youtube-api resposne
+        //TODO assert type of simple-youtube-api response
 
         const list = results.flatMap((item): SelectListItem[] => {
             const selectListItem = new SelectListItem()
@@ -376,7 +376,7 @@ export class DiscordCommandService {
 
     @HandleDiscordError()
     public async help(payload: Message | ChatInputCommandInteraction) {
-        const discordConfig = await this.configService.getDiscordConfig()
+        const discordConfig = this.configService.getDiscordConfig()
         const embed: EmbedBuilder = new EmbedBuilder()
             .setColor('#ffffff')
             .setTitle('Commands')
