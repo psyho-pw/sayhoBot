@@ -46,6 +46,7 @@ export interface Front {
 export interface YoutubeConfig {
     YOUTUBE_API_KEY: string
     COOKIE: string
+    IDENTITY_TOKEN: string
 }
 
 export interface Configs {
