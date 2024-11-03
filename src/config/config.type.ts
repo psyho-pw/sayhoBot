@@ -24,7 +24,7 @@ export interface DiscordConfig {
     CLIENT_ID: string
     GUILD_ID: string
     TOKEN: string
-    YOUTUBE_API_KEY: string
+
     WEBHOOK_URL: string
     MESSAGE_DELETE_TIMEOUT: number
 }
@@ -43,6 +43,11 @@ export interface Front {
     FRONT_URL: string
 }
 
+export interface YoutubeConfig {
+    YOUTUBE_API_KEY: string
+    COOKIE: string
+}
+
 export interface Configs {
     APP: AppConfig
     SERVER: ServerConfig
@@ -50,6 +55,7 @@ export interface Configs {
     DISCORD: DiscordConfig
     AUTH: AuthConfig
     AWS: AwsConfig
+    YOUTUBE: YoutubeConfig
     FRONT: Front
 }
 export interface EmailConfig {

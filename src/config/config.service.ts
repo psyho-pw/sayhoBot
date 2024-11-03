@@ -1,4 +1,4 @@
-import {DiscordConfig} from './config.type'
+import {DiscordConfig, YoutubeConfig} from './config.type'
 import {Injectable} from '@nestjs/common'
 import {ConfigService} from '@nestjs/config'
 import {
@@ -36,6 +36,10 @@ export class AppConfigService {
 
     getServerConfig(): ServerConfig {
         return this.configService.getOrThrow('SERVER')
+    }
+
+    getYoutubeConfig(): YoutubeConfig {
+        return this.configService.getOrThrow('YOUTUBE')
     }
 
     getAwsConfig(): AwsConfig {
