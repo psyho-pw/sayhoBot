@@ -35,6 +35,8 @@ import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decor
 import {DiscordClientException} from '../common/exceptions/discord/discord.client.exception'
 import {Song} from './discord.model'
 import {Video} from './discord.type'
+import cookie from './cookie.json'
+import * as fs from 'node:fs'
 
 @Injectable()
 export class DiscordClientService {
@@ -303,12 +305,14 @@ export class DiscordClientService {
         this.musicQueue.set(guildId, musicQueue)
 
         const youtubeConfig = this.configService.getYoutubeConfig()
+
         const requestOptions: ytdl.getInfoOptions['requestOptions'] = {
             headers: {
-                cookie: youtubeConfig.COOKIE,
                 'x-youtube-identity-token': youtubeConfig.IDENTITY_TOKEN,
             },
         }
+
+        const agent = ytdl.createAgent(cookie)
 
         // const validate = ytdl.validateURL(musicQueue[0].url)
         // if (!validate) {
@@ -322,6 +326,7 @@ export class DiscordClientService {
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
             requestOptions,
+            agent,
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
             await this.discordNotificationService.sendErrorReport(error)
