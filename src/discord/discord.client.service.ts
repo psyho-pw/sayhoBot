@@ -307,17 +307,13 @@ export class DiscordClientService {
             this.logger.error('Please input a **valid** URL.')
             await channel.send('Please input a **valid** URL.')
         }
+        const cookie = this.configService.getYoutubeConfig().COOKIE
         const stream = ytdl(musicQueue[0].videoId, {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
-            requestOptions: {
-                headers: {
-                    'User-Agent':
-                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                },
-            },
+            requestOptions: {headers: {cookie}},
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
             await this.discordNotificationService.sendErrorReport(error)

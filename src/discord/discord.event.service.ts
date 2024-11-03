@@ -25,7 +25,7 @@ import {SimpleYoutubeAPI} from './discord.type'
 @Injectable()
 export class DiscordEventService {
     private readonly youtube: SimpleYoutubeAPI = new Youtube(
-        this.configService.getDiscordConfig().YOUTUBE_API_KEY,
+        this.configService.getYoutubeConfig().YOUTUBE_API_KEY,
     )
 
     constructor(

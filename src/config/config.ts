@@ -64,9 +64,12 @@ export const configs = (): Configs => {
             CLIENT_ID: process.env.DISCORD_CLIENT_ID || '',
             GUILD_ID: process.env.DISCORD_GUILD_ID || '',
             TOKEN: process.env.DISCORD_TOKEN || '',
-            YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
             WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL || '',
             MESSAGE_DELETE_TIMEOUT: 7_000,
+        },
+        YOUTUBE: {
+            YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
+            COOKIE: process.env.COOKIE || '',
         },
         AUTH: {
             GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
