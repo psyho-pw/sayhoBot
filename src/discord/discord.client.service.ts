@@ -302,18 +302,26 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.musicQueue.set(guildId, musicQueue)
 
-        const validate = ytdl.validateURL(musicQueue[0].url)
-        if (!validate) {
-            this.logger.error('Please input a **valid** URL.')
-            await channel.send('Please input a **valid** URL.')
+        const youtubeConfig = this.configService.getYoutubeConfig()
+        const requestOptions: ytdl.getInfoOptions['requestOptions'] = {
+            headers: {
+                cookie: youtubeConfig.COOKIE,
+                'x-youtube-identity-token': youtubeConfig.IDENTITY_TOKEN,
+            },
         }
-        const cookie = this.configService.getYoutubeConfig().COOKIE
+
+        // const validate = ytdl.validateURL(musicQueue[0].url)
+        // if (!validate) {
+        //     this.logger.error('Please input a **valid** URL.')
+        //     await channel.send('Please input a **valid** URL.')
+        // }
+
         const stream = ytdl(musicQueue[0].videoId, {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
-            requestOptions: {headers: {cookie}},
+            requestOptions,
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
             await this.discordNotificationService.sendErrorReport(error)

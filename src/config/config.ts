@@ -70,6 +70,7 @@ export const configs = (): Configs => {
         YOUTUBE: {
             YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
             COOKIE: process.env.COOKIE || '',
+            IDENTITY_TOKEN: process.env.IDENTITY_TOKEN || '',
         },
         AUTH: {
             GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
