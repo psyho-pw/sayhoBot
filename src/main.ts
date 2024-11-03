@@ -6,9 +6,11 @@ import {ClassSerializerInterceptor, Logger, ValidationPipe, VersioningType} from
 import {NestExpressApplication} from '@nestjs/platform-express'
 import helmet from 'helmet'
 import {initializeTransactionalContext} from 'typeorm-transactional'
+import * as process from 'node:process'
 
 async function bootstrap() {
     initializeTransactionalContext()
+    console.log(process.env.NODE_ENV)
     const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
     const configService = app.get(AppConfigService)
