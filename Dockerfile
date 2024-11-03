@@ -1,4 +1,4 @@
-FROM node:20.0.0-alpine as development
+FROM node:22.11.0-alpine as development
 RUN apk add --update python3 make g++ ffmpeg\
    && rm -rf /var/cache/apk/*
 
@@ -18,7 +18,7 @@ COPY . .
 
 RUN pnpm run build
 
-FROM node:20.0.0-alpine as production
+FROM node:22.11.0-alpine as production
 RUN apk --no-cache add --update python3 make g++ ffmpeg tzdata && \
     cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
     echo "Asia/Seoul" > /etc/timezone \
