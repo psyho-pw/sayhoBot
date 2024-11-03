@@ -312,6 +312,12 @@ export class DiscordClientService {
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
+            requestOptions: {
+                headers: {
+                    'User-Agent':
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                },
+            },
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
             await this.discordNotificationService.sendErrorReport(error)
