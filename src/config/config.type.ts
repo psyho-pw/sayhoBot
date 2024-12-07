@@ -10,6 +10,7 @@ export interface AppConfig {
     AUTHORS: string
     PORT: string | number
     ENV: string
+    PROXY: string
 }
 
 export interface ServerConfig {

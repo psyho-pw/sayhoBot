@@ -16,6 +16,7 @@ export const configs = (): Configs => {
             AUTHORS: pkg.author,
             PORT: process.env.PORT || 8081,
             ENV: currentEnv,
+            PROXY: process.env.PROXY ?? '',
         },
         SERVER: {
             SESSION: {

@@ -35,8 +35,6 @@ import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decor
 import {DiscordClientException} from '../common/exceptions/discord/discord.client.exception'
 import {Song} from './discord.model'
 import {Video} from './discord.type'
-import cookie from './cookie.json'
-import * as fs from 'node:fs'
 
 @Injectable()
 export class DiscordClientService {
@@ -312,13 +310,13 @@ export class DiscordClientService {
             },
         }
 
-        const agent = ytdl.createAgent(cookie)
+        const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
 
-        // const validate = ytdl.validateURL(musicQueue[0].url)
-        // if (!validate) {
-        //     this.logger.error('Please input a **valid** URL.')
-        //     await channel.send('Please input a **valid** URL.')
-        // }
+        const validate = ytdl.validateURL(musicQueue[0].url)
+        if (!validate) {
+            this.logger.error('Please input a **valid** URL.')
+            await channel.send('Please input a **valid** URL.')
+        }
 
         const stream = ytdl(musicQueue[0].videoId, {
             filter: 'audioonly',
