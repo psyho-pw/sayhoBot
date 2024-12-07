@@ -312,11 +312,11 @@ export class DiscordClientService {
 
         const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
 
-        const validate = ytdl.validateURL(musicQueue[0].url)
-        if (!validate) {
-            this.logger.error('Please input a **valid** URL.')
-            await channel.send('Please input a **valid** URL.')
-        }
+        // const validate = ytdl.validateURL(musicQueue[0].url)
+        // if (!validate) {
+        //     this.logger.error('Please input a **valid** URL.')
+        //     await channel.send('Please input a **valid** URL.')
+        // }
 
         const stream = ytdl(musicQueue[0].videoId, {
             filter: 'audioonly',
