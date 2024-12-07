@@ -302,8 +302,6 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.musicQueue.set(guildId, musicQueue)
 
-        const youtubeConfig = this.configService.getYoutubeConfig()
-
         const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
 
         // const validate = ytdl.validateURL(musicQueue[0].url)
@@ -317,7 +315,6 @@ export class DiscordClientService {
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
-            requestOptions: agent,
             agent,
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
