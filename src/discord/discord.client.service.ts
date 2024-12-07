@@ -304,12 +304,6 @@ export class DiscordClientService {
 
         const youtubeConfig = this.configService.getYoutubeConfig()
 
-        const requestOptions: ytdl.getInfoOptions['requestOptions'] = {
-            headers: {
-                'x-youtube-identity-token': youtubeConfig.IDENTITY_TOKEN,
-            },
-        }
-
         const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
 
         // const validate = ytdl.validateURL(musicQueue[0].url)
@@ -323,7 +317,7 @@ export class DiscordClientService {
             quality: 'highestaudio',
             highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
             liveBuffer: 4000,
-            requestOptions,
+            requestOptions: agent,
             agent,
         }).on('error', async (error: any) => {
             this.logger.error('ytdl create readable stream error', error)
