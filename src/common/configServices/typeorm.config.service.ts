@@ -7,11 +7,12 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
     constructor(private readonly configService: AppConfigService) {}
 
     createTypeOrmOptions(): TypeOrmModuleOptions | Promise<TypeOrmModuleOptions> {
-        return {
+        const options: TypeOrmModuleOptions = {
             ...this.configService.getDBConfig(),
             entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
-            keepConnectionAlive: true,
             logging: false,
         }
+
+        return options
     }
 }

@@ -15,6 +15,8 @@ export function HandleDiscordError(bubble = false) {
             } catch (error) {
                 if (error instanceof GeneralException) error.CallMethod = propertyKey
 
+                console.log(error)
+
                 const discordNotificationService: DiscordNotificationService =
                     this.discordNotificationService
                 await discordNotificationService.sendErrorReport(error)
