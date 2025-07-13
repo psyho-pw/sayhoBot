@@ -1,4 +1,4 @@
-import {Inject, Injectable} from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import {
     ChatInputCommandInteraction,
     Client,
@@ -24,17 +24,17 @@ import {
     StreamType,
     VoiceConnection,
 } from '@discordjs/voice'
-import {HttpService} from '@nestjs/axios'
-import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
-import {Logger} from 'winston'
+import { HttpService } from '@nestjs/axios'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
+import { Logger } from 'winston'
 import ytdl from '@distube/ytdl-core'
-import {DiscordNotificationService} from './discord.notification.service'
-import {AppConfigService} from '../config/config.service'
-import {SongService} from '../song/song.service'
-import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
-import {DiscordClientException} from '../common/exceptions/discord/discord.client.exception'
-import {Song} from './discord.model'
-import {Video} from './discord.type'
+import { DiscordNotificationService } from './discord.notification.service'
+import { AppConfigService } from '../config/config.service'
+import { SongService } from '../song/song.service'
+import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
+import { DiscordClientException } from '../common/exceptions/discord/discord.client.exception'
+import { Song } from './discord.model'
+import { Video } from './discord.type'
 
 @Injectable()
 export class DiscordClientService {
@@ -96,8 +96,8 @@ export class DiscordClientService {
             durationObj.seconds < 10
                 ? '0' + durationObj.seconds
                 : durationObj.seconds
-                  ? durationObj.seconds
-                  : '00'
+                    ? durationObj.seconds
+                    : '00'
         }`
     }
 
