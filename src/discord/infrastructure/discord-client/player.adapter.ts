@@ -52,8 +52,22 @@ export class PlayerAdapter {
       }
     });
 
-    player.on('error', (error) => {
+    player.on('error', async (error) => {
       console.error('Player error:', error);
+      // On stream error, skip to next song
+      const queue = this.stateAdapter.getMusicQueue(context.guildId);
+      if (queue.length > 0) {
+        const queueArray = [...queue];
+        queueArray.shift();
+        this.stateAdapter.clearQueue(context.guildId);
+        this.stateAdapter.addSongsToQueue(context.guildId, queueArray);
+      }
+
+      if (this.stateAdapter.getMusicQueue(context.guildId).length > 0) {
+        await onPlayNext();
+      } else {
+        this.stateAdapter.setIsPlaying(context.guildId, false);
+      }
     });
 
     this.stateAdapter.setPlayer(context.guildId, player);
