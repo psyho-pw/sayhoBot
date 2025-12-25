@@ -22,9 +22,8 @@ import { ConfigServiceKey } from 'src/config/config.service';
 import { IConfigService } from 'src/config/config.type';
 import { HandleDiscordError } from '../../common/aop';
 import { DiscordException } from '../../common/exceptions/discord.exception';
-import { DiscordNotificationService } from '../discord.notification.service';
-import { ChannelStateManager } from '../state';
-
+import { DiscordNotificationService } from '../notification/notification.service';
+import { ChannelStateManager } from '../state/channel-state.manager';
 export interface PlayContext {
   message: Message | ChatInputCommandInteraction;
   guildId: string;

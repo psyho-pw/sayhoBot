@@ -2,10 +2,10 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable } from '@nestjs/common';
 import { APIEmbedField } from 'discord-api-types/v10';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
-import { ConfigServiceKey, TypedConfigService } from 'src/config/config.service';
-import { DiscordException } from '../common/exceptions/discord.exception';
-import { GeneralException } from '../common/exceptions/general.exception';
-import { LoggerServiceKey, ILoggerService } from '../common/logger/logger.interface';
+import { DiscordException } from '../../common/exceptions/discord.exception';
+import { GeneralException } from '../../common/exceptions/general.exception';
+import { LoggerServiceKey, ILoggerService } from '../../common/logger/logger.interface';
+import { ConfigServiceKey, TypedConfigService } from '../../config/config.service';
 
 @Injectable()
 export class DiscordNotificationService {

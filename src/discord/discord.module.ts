@@ -1,12 +1,13 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { DiscordClientService } from './discord.client.service';
-import { DiscordCommandService } from './discord.command.service';
-import { DiscordEventService } from './discord.event.service';
-import { DiscordNotificationService } from './discord.notification.service';
+import { DiscordClientService } from './client/client.service';
+import { DiscordCommandService } from './command/command.service';
 import { DiscordService } from './discord.service';
-import { PlayerService, StreamService } from './player';
-import { ChannelStateManager } from './state';
+import { DiscordEventService } from './event/event.service';
+import { DiscordNotificationService } from './notification/notification.service';
+import { PlayerService } from './player/player.service';
+import { StreamService } from './player/stream.service';
+import { ChannelStateManager } from './state/channel-state.manager';
 import { DiscordErrorAspect } from '../common/aop';
 import { SongModule } from '../song/song.module';
 

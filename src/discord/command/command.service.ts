@@ -13,14 +13,14 @@ import {
 } from 'discord.js';
 import Youtube from 'simple-youtube-api';
 import { IConfigService } from 'src/config/config.type';
-import { DiscordClientService } from './discord.client.service';
-import { ParsedPlayCommand, SelectListItem, Song } from './discord.model';
-import { DiscordNotificationService } from './discord.notification.service';
-import { SimpleYoutubeAPI } from './discord.type';
-import { HandleDiscordError } from '../common/aop';
-import { DiscordException } from '../common/exceptions/discord.exception';
-import { LoggerServiceKey, ILoggerService } from '../common/logger/logger.interface';
-import { ConfigServiceKey } from '../config/config.service';
+import { HandleDiscordError } from '../../common/aop';
+import { DiscordException } from '../../common/exceptions/discord.exception';
+import { LoggerServiceKey, ILoggerService } from '../../common/logger/logger.interface';
+import { ConfigServiceKey } from '../../config/config.service';
+import { DiscordClientService } from '../client/client.service';
+import { ParsedPlayCommand, SelectListItem, Song } from '../discord.model';
+import { SimpleYoutubeAPI } from '../discord.type';
+import { DiscordNotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class DiscordCommandService {

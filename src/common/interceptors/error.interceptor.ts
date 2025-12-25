@@ -12,7 +12,7 @@ import { catchError } from 'rxjs/operators';
 import { ConfigServiceKey } from 'src/config/config.service';
 import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
-import { DiscordNotificationService } from 'src/discord/discord.notification.service';
+import { DiscordNotificationService } from 'src/discord/notification/notification.service';
 import { LoggerServiceKey, ILoggerService } from '../logger/logger.interface';
 
 @Injectable()

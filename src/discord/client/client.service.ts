@@ -14,15 +14,17 @@ import {
   VoiceChannel,
 } from 'discord.js';
 import { IConfigService } from 'src/config/config.type';
-import { Song } from './discord.model';
-import { Video } from './discord.type';
-import { PlayerService, StreamService, PlayContext } from './player';
-import { ChannelStateManager } from './state';
-import { HandleDiscordError } from '../common/aop';
-import { DiscordException } from '../common/exceptions/discord.exception';
-import { LoggerServiceKey, ILoggerService } from '../common/logger/logger.interface';
-import { ConfigServiceKey } from '../config/config.service';
-import { SongService } from '../song/song.service';
+import { HandleDiscordError } from '../../common/aop';
+import { DiscordException } from '../../common/exceptions/discord.exception';
+import { LoggerServiceKey, ILoggerService } from '../../common/logger/logger.interface';
+import { ConfigServiceKey } from '../../config/config.service';
+import { SongService } from '../../song/song.service';
+import { Song } from '../discord.model';
+import { Video } from '../discord.type';
+import { PlayerService, PlayContext } from '../player/player.service';
+import { StreamService } from '../player/stream.service';
+import { ChannelState } from '../state/channel-state';
+import { ChannelStateManager } from '../state/channel-state.manager';
 
 @Injectable()
 export class DiscordClientService {
@@ -205,7 +207,7 @@ export class DiscordClientService {
     this.stateManager.deleteConnection(guildId);
   }
 
-  public getTotalMusicQueue(): Map<string, import('./state').ChannelState> {
+  public getTotalMusicQueue(): Map<string, ChannelState> {
     return this.stateManager.getAll();
   }
 

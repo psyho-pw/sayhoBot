@@ -9,12 +9,12 @@ import {
   VoiceState,
 } from 'discord.js';
 import { IConfigService } from 'src/config/config.type';
-import { DiscordClientService } from './discord.client.service';
-import { DiscordCommandService } from './discord.command.service';
-import { DiscordEventService } from './discord.event.service';
 import { HandleDiscordError } from '../common/aop';
 import { LoggerServiceKey, ILoggerService } from '../common/logger/logger.interface';
 import { ConfigServiceKey } from '../config/config.service';
+import { DiscordClientService } from './client/client.service';
+import { DiscordCommandService } from './command/command.service';
+import { DiscordEventService } from './event/event.service';
 
 @Injectable()
 export class DiscordService {

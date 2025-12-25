@@ -6,7 +6,7 @@ import { fetch as undiciFetch, ProxyAgent } from 'undici';
 import { LoggerServiceKey, ILoggerService } from 'src/common/logger/logger.interface';
 import { IConfigService } from 'src/config/config.type';
 import { ConfigServiceKey } from '../../config/config.service';
-import { DiscordNotificationService } from '../discord.notification.service';
+import { DiscordNotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class StreamService {

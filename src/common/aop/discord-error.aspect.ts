@@ -3,7 +3,7 @@ import { Aspect, LazyDecorator, WrapParams, createDecorator } from '@toss/nestjs
 import { ConfigServiceKey } from 'src/config/config.service';
 import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
-import { DiscordNotificationService } from '../../discord/discord.notification.service';
+import { DiscordNotificationService } from '../../discord/notification/notification.service';
 import { GeneralException } from '../exceptions/general.exception';
 import { ILoggerService, LoggerServiceKey } from '../logger/logger.interface';
 
