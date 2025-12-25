@@ -14,21 +14,11 @@ import {
 } from 'discord.js'
 import {
     AudioPlayer,
-    AudioPlayerStatus,
-    AudioResource,
-    createAudioPlayer,
-    createAudioResource,
-    DiscordGatewayAdapterCreator,
     generateDependencyReport,
-    joinVoiceChannel,
-    StreamType,
     VoiceConnection,
 } from '@discordjs/voice'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { Logger } from 'winston'
-import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core'
-import { fetch as undiciFetch, ProxyAgent } from 'undici'
-import { DiscordNotificationService } from './discord.notification.service'
 import { AppConfigService } from '../config/config.service'
 import { SongService } from '../song/song.service'
 import { HandleDiscordError } from '../common/aop'
@@ -36,6 +26,7 @@ import { DiscordException } from '../common/exceptions/discord.exception'
 import { Song } from './discord.model'
 import { Video } from './discord.type'
 import { ChannelStateManager } from './state'
+import { PlayerService, StreamService, PlayContext } from './player'
 
 @Injectable()
 export class DiscordClientService {
@@ -46,8 +37,9 @@ export class DiscordClientService {
     constructor(
         private readonly configService: AppConfigService,
         private readonly songService: SongService,
-        private readonly discordNotificationService: DiscordNotificationService,
         private readonly stateManager: ChannelStateManager,
+        private readonly playerService: PlayerService,
+        private readonly streamService: StreamService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
@@ -65,7 +57,7 @@ export class DiscordClientService {
 
         this.logger.verbose(generateDependencyReport())
         try {
-            this.rest = new REST({version: '10'}).setToken(
+            this.rest = new REST({ version: '10' }).setToken(
                 this.configService.getDiscordConfig().TOKEN,
             )
             await this.discordBotClient.login(this.configService.getDiscordConfig().TOKEN)
@@ -120,157 +112,13 @@ export class DiscordClientService {
             .setURL(url)
             .setDescription(`Queued ${queuedCount} track${queuedCount === 1 ? '' : 's'}`)
             .addFields([
-                {name: 'Total Queue', value: `${queueLength} tracks`},
+                { name: 'Total Queue', value: `${queueLength} tracks` },
                 {
                     name: 'Track',
                     value: `:musical_note:  ${title} :musical_note: has been added to queue`,
                 },
             ])
             .setThumbnail(thumbnail)
-    }
-
-    private async playerWrapper(handler: () => Promise<any>, guildId: string) {
-        try {
-            await handler()
-        } catch (err) {
-            const player = this.stateManager.getPlayer(guildId)
-            if (!player) return this.logger.error('player not found')
-            player.emit('error', err)
-        }
-    }
-
-    @HandleDiscordError({ bubble: true })
-    private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
-        const guildId = message.guildId || ''
-        if (this.stateManager.getIsPlaying(guildId)) return
-
-        const channel = message.channel as TextChannel
-        const musicQueue = this.stateManager.getMusicQueue(guildId)
-        if (!musicQueue.length) throw new DiscordException('Queue does not exist', 'client')
-
-        const currentItem = musicQueue[0]
-        if (!currentItem) throw new DiscordException('Queue item is corrupted', 'client')
-
-        const embed = new EmbedBuilder()
-            .setColor('#0099ff')
-            .setTitle(`:: Currently playing :arrow_forward: ::`)
-            .setURL(currentItem.url)
-            .setThumbnail(currentItem.thumbnail)
-            .setDescription(`${currentItem.title} (${currentItem.duration})`)
-
-        const msg = await channel.send({embeds: [embed]})
-        this.stateManager.setCurrentInfoMsg(guildId, msg)
-        this.logger.info(`Currently playing ${currentItem.title}`)
-
-        this.stateManager.setIsPlaying(guildId, true)
-    }
-
-    @HandleDiscordError({ bubble: true })
-    private async playerIdleHandler(message: Message | ChatInputCommandInteraction) {
-        const guildId = message.guildId
-        if (!guildId) throw new DiscordException('guildId not specified', 'client')
-
-        const channel = message.channel as TextChannel
-
-        this.stateManager.deleteCurrentInfoMsg(guildId)
-        const musicQueue = this.stateManager.getMusicQueue(guildId)
-        if (!musicQueue.length) throw new DiscordException('Queue does not exist', 'client')
-
-        this.stateManager.setIsPlaying(guildId, false)
-
-        if (musicQueue.length > 1) {
-            this.logger.debug('queue length is not zero')
-            musicQueue.shift()
-            this.stateManager.setMusicQueue(guildId, musicQueue)
-            await this.playSong(message)
-            return
-        }
-
-        this.logger.debug('queue empty')
-        setTimeout(() => {
-            const currentQueue = this.stateManager.getMusicQueue(guildId)
-            if (currentQueue.length <= 1 && !this.stateManager.getIsPlaying(guildId)) {
-                this.stateManager.setMusicQueue(guildId, [])
-                this.stateManager.setIsPlaying(guildId, false)
-                this.stateManager.setVolume(guildId, 1)
-
-                channel
-                    .send(`Disconnected from channel due to inactivity`)
-                    .then(msg =>
-                        setTimeout(
-                            () => msg.delete(),
-                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                        ),
-                    )
-                this.stateManager.getConnection(guildId)?.destroy()
-                this.stateManager.deleteConnection(guildId)
-            }
-        }, 180000)
-    }
-
-    @HandleDiscordError()
-    private async createPlayer(message: Message | ChatInputCommandInteraction) {
-        const guildId = message.guildId
-        if (!guildId) throw new DiscordException('guildId not specified', 'client')
-
-        const player: AudioPlayer = createAudioPlayer()
-        const channel = message.channel as TextChannel
-
-        player
-            .on(AudioPlayerStatus.Playing, () =>
-                this.playerWrapper(() => this.playerOnPlayHandler(message), guildId),
-            )
-            .on(AudioPlayerStatus.Idle, () =>
-                this.playerWrapper(() => this.playerIdleHandler(message), guildId),
-            )
-            .on('error', async err => {
-                this.logger.error('fatal error occurred', {
-                    name: err.name,
-                    message: err.message,
-                    stack: err.stack,
-                })
-
-                const musicQueue = this.stateManager.getMusicQueue(guildId)
-                this.stateManager.setIsPlaying(guildId, false)
-                this.stateManager.deleteCurrentInfoMsg(guildId)
-
-                if (!musicQueue.length) {
-                    return channel
-                        .send('Queue does not exist')
-                        .then(msg =>
-                            setTimeout(
-                                () => msg.delete(),
-                                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                            ),
-                        )
-                }
-
-                if (err.message === 'Status code: 410') {
-                    return channel
-                        .send(`Unplayable Song: ${musicQueue[0].title}`)
-                        .then(msg =>
-                            setTimeout(
-                                () => msg.delete(),
-                                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                            ),
-                        )
-                }
-
-                await channel
-                    .send('fatal error occurred, skipping ,,')
-                    .then(msg =>
-                        setTimeout(
-                            () => msg.delete(),
-                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                        ),
-                    )
-
-                const exception = new DiscordException(err.message, 'client', 'player')
-                exception.stack = err.stack
-                await this.discordNotificationService.sendErrorReport(exception)
-            })
-
-        return player
     }
 
     @HandleDiscordError()
@@ -289,67 +137,30 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.stateManager.setMusicQueue(guildId, musicQueue)
 
-        const proxyUrl = this.configService.getAppConfig().PROXY
-        const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
+        const resource = await this.streamService.createAudioResourceFromUrl(musicQueue[0].url)
 
-        const createProxyFetcher = (agent: ProxyAgent) => {
-            return (url: URL | RequestInfo, options?: RequestInit): Promise<Response> =>
-                undiciFetch(url.toString(), {
-                    ...((options ?? {}) as Record<string, unknown>),
-                    dispatcher: agent,
-                }) as Promise<Response>
-        }
+        if (!message.guild)
+            return channel.send(`Error occurred on joining voice channel\nguild is not defined`)
 
-        const ytdl = new YtdlCore({
-            clients: ['ios', 'android', 'tv'],
-            fetcher: proxyAgent ? createProxyFetcher(proxyAgent) : undefined,
+        const connection = this.playerService.getOrCreateConnection(
+            guildId,
+            message.guild,
+            musicQueue[0].voiceChannel,
+        )
+
+        const context: PlayContext = { message, guildId, channel }
+        const player = this.playerService.getOrCreatePlayer(context, async () => {
+            await this.playSong(message)
         })
-        const webStream = await ytdl.download(musicQueue[0].url, {
-            filter: 'audioandvideo',
-        })
-        const stream = toPipeableStream(webStream)
-
-        stream.on('error', async (error: any) => {
-            this.logger.error('ytdl stream error', error)
-            await this.discordNotificationService.sendErrorReport(error)
-        })
-
-        const resource: AudioResource = createAudioResource(stream, {
-            inputType: StreamType.Arbitrary,
-        })
-        let connection = this.stateManager.getConnection(guildId)
-
-        if (!connection) {
-            if (!message.guild)
-                return channel.send(`Error occurred on joining voice channel\nguild is not defined`)
-
-            connection = joinVoiceChannel({
-                channelId: musicQueue[0].voiceChannel.id,
-                guildId: message.guild.id,
-                adapterCreator: message.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
-            })
-
-            this.stateManager.setConnection(guildId, connection)
-            this.stateManager.setIsPlaying(guildId, false)
-            this.stateManager.setVolume(guildId, 1)
-        }
-
-        let player = this.stateManager.getPlayer(guildId)
-        if (!player) {
-            const newPlayer = await this.createPlayer(message)
-            this.stateManager.setPlayer(guildId, newPlayer)
-            player = newPlayer
-        }
 
         try {
-            player.play(resource)
-            connection.subscribe(player)
+            this.playerService.play(player, connection, resource)
         } catch (err: any) {
             this.logger.error(err)
             await channel.send('Error occurred on player.play()')
             throw new DiscordException(err.message, 'client')
         } finally {
-            await this.songService.create({url: nextSong.url, title: nextSong.title})
+            await this.songService.create({ url: nextSong.url, title: nextSong.title })
         }
     }
 

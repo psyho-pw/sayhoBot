@@ -8,6 +8,7 @@ import {DiscordEventService} from './discord.event.service'
 import {DiscordNotificationService} from './discord.notification.service'
 import {DiscordErrorAspect} from '../common/aop'
 import {ChannelStateManager} from './state'
+import {PlayerService, StreamService} from './player'
 
 @Module({
     imports: [HttpModule, SongModule],
@@ -19,6 +20,8 @@ import {ChannelStateManager} from './state'
         DiscordNotificationService,
         DiscordErrorAspect,
         ChannelStateManager,
+        PlayerService,
+        StreamService,
     ],
     exports: [DiscordService, DiscordNotificationService],
 })
