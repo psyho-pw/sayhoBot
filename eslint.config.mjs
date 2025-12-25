@@ -10,16 +10,14 @@ import prettierPlugin from 'eslint-plugin-prettier';
 
 export default tseslint.config(
     {
-        // Global ignores
         ignores: ['node_modules', 'dist', '.eslintrc.js'],
     },
     {
-        // General config for all files
         plugins: {
             '@typescript-eslint': tseslint.plugin,
             import: importPlugin,
             'unused-imports': unusedImports,
-            prettier: prettierPlugin, // Add this plugin
+            prettier: prettierPlugin,
         },
         languageOptions: {
             globals: {
