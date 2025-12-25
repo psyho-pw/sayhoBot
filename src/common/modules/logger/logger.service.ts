@@ -2,12 +2,12 @@ import { Inject, Injectable, Scope } from '@nestjs/common';
 import { INQUIRER } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { v7 } from 'uuid';
-import { IConfigService } from 'src/config/config.type';
 import { Log, LogParams, ILoggerService } from './logger.interface';
-import { ConfigServiceKey } from '../../config/config.service';
-import { Env } from '../../constants';
+import { Env } from '../../../constants';
 import { ClsServiceKey } from '../cls/cls.module';
 import { IClsService } from '../cls/cls.type';
+import { ConfigServiceKey } from '../config/config.service';
+import { IConfigService } from '../config/config.type';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class LoggerService implements ILoggerService {
@@ -15,11 +15,9 @@ export class LoggerService implements ILoggerService {
   private isTest: boolean;
 
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly winstonLogger: WinstonLogger,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly winstonLogger: WinstonLogger,
     @Inject(INQUIRER) private readonly caller: object,
-    @Inject(ConfigServiceKey)
-    private readonly configService: IConfigService,
+    @Inject(ConfigServiceKey) private readonly configService: IConfigService,
     @Inject(ClsServiceKey) private readonly clsService: IClsService,
   ) {
     this.context = this.caller?.constructor.name || 'Unknown';

@@ -7,12 +7,7 @@ export const ClsServiceKey = Symbol('ClsService');
 @Global()
 @Module({
   imports: [ClsModuleInNest.forRoot({})],
-  providers: [
-    {
-      provide: ClsServiceKey,
-      useClass: ClsService,
-    },
-  ],
+  providers: [{ provide: ClsServiceKey, useClass: ClsService }],
   exports: [ClsModuleInNest, ClsServiceKey],
 })
 export class ClsModule {}

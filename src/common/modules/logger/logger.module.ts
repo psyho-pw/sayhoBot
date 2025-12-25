@@ -1,11 +1,11 @@
 import { Global, Module } from '@nestjs/common';
 import { WinstonModule, utilities } from 'nest-winston';
 import winston from 'winston';
-import { ConfigServiceKey } from 'src/config/config.service';
-import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
 import { LoggerServiceKey } from './logger.interface';
 import { LoggerService } from './logger.service';
+import { ConfigServiceKey } from '../config/config.service';
+import { IConfigService } from '../config/config.type';
 
 @Global()
 @Module({
@@ -37,12 +37,7 @@ import { LoggerService } from './logger.service';
       },
     }),
   ],
-  providers: [
-    {
-      provide: LoggerServiceKey,
-      useClass: LoggerService,
-    },
-  ],
+  providers: [{ provide: LoggerServiceKey, useClass: LoggerService }],
   exports: [LoggerServiceKey],
 })
 export class LoggerModule {}

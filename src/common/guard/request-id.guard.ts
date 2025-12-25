@@ -6,11 +6,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { v7 } from 'uuid';
-import { ConfigServiceKey } from 'src/config/config.service';
-import { IConfigService } from 'src/config/config.type';
-import { ClsServiceKey } from '../cls/cls.module';
-import { IClsService } from '../cls/cls.type';
-import { LoggerServiceKey, ILoggerService } from '../logger/logger.interface';
+import { ClsServiceKey } from '../modules/cls/cls.module';
+import { IClsService } from '../modules/cls/cls.type';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
+import { LoggerServiceKey, ILoggerService } from '../modules/logger/logger.interface';
 
 @Injectable()
 export class RequestIdGuard implements CanActivate {

@@ -5,54 +5,53 @@ import { SongModule } from '../song/song.module';
 import { PlayMusicUseCase } from './application/play-music.usecase';
 import { QueueStateManager } from './application/queue-state.manager';
 import { SearchVideoUseCase } from './application/search-video.usecase';
-import { DiscordClientService } from './client/client.service';
-import { DiscordCommandService } from './command/command.service';
 import { DiscordService } from './discord.service';
+import { NotificationPort } from './domain/ports/notification.port';
+import { PoTokenServicePort } from './domain/ports/po-token.port';
 import { StreamProviderPort } from './domain/ports/stream-provider.port';
 import { VoiceConnectionManagerPort } from './domain/ports/voice-connection.port';
 import { YoutubeSearchPort } from './domain/ports/youtube-search.port';
-import { DiscordEventService } from './event/event.service';
+import { ChannelStateAdapter } from './infrastructure/discord-client/channel-state.adapter';
+import { DiscordClientAdapter } from './infrastructure/discord-client/discord-client.adapter';
+import { PlayerAdapter } from './infrastructure/discord-client/player.adapter';
+import { NotificationAdapter } from './infrastructure/notification/notification.adapter';
 import { StreamProviderAdapter } from './infrastructure/voice/stream-provider.adapter';
 import { VoiceConnectionAdapter } from './infrastructure/voice/voice-connection.adapter';
+import { PoTokenAdapter } from './infrastructure/youtube/po-token.adapter';
 import { YoutubeSearchAdapter } from './infrastructure/youtube/youtube-search.adapter';
-import { DiscordNotificationService } from './notification/notification.service';
-import { PlayerService } from './player/player.service';
-import { StreamService } from './player/stream.service';
-import { ChannelStateManager } from './state/channel-state.manager';
+import { CommandHandler } from './presentation/commands/command.handler';
+import { EventHandler } from './presentation/events/event.handler';
 
 @Module({
   imports: [HttpModule, SongModule],
   providers: [
-    // Clean Architecture - Application layer
+    // AOP
+    DiscordErrorAspect,
+
+    // Application layer
     QueueStateManager,
     PlayMusicUseCase,
     SearchVideoUseCase,
 
-    // Clean Architecture - Infrastructure adapters (Port implementations)
-    {
-      provide: YoutubeSearchPort,
-      useClass: YoutubeSearchAdapter,
-    },
-    {
-      provide: StreamProviderPort,
-      useClass: StreamProviderAdapter,
-    },
-    {
-      provide: VoiceConnectionManagerPort,
-      useClass: VoiceConnectionAdapter,
-    },
+    // Infrastructure - Port implementations
+    { provide: YoutubeSearchPort, useClass: YoutubeSearchAdapter },
+    { provide: PoTokenServicePort, useClass: PoTokenAdapter },
+    { provide: StreamProviderPort, useClass: StreamProviderAdapter },
+    { provide: VoiceConnectionManagerPort, useClass: VoiceConnectionAdapter },
+    { provide: NotificationPort, useClass: NotificationAdapter },
 
-    // Legacy services (maintained for compatibility)
+    // Infrastructure - Discord adapters
+    ChannelStateAdapter,
+    PlayerAdapter,
+    DiscordClientAdapter,
+
+    // Presentation layer
+    CommandHandler,
+    EventHandler,
+
+    // Main service
     DiscordService,
-    DiscordClientService,
-    DiscordCommandService,
-    DiscordEventService,
-    DiscordNotificationService,
-    DiscordErrorAspect,
-    ChannelStateManager,
-    PlayerService,
-    StreamService,
   ],
-  exports: [DiscordService, DiscordNotificationService],
+  exports: [DiscordService, NotificationPort],
 })
 export class DiscordModule {}

@@ -1,10 +1,10 @@
 import { CallHandler, ExecutionContext, Inject, Injectable, NestInterceptor } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { tap } from 'rxjs';
-import { ConfigServiceKey } from 'src/config/config.service';
-import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
-import { LoggerServiceKey, ILoggerService } from '../logger/logger.interface';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
+import { LoggerServiceKey, ILoggerService } from '../modules/logger/logger.interface';
 
 interface RequestLog {
   method: string;

@@ -8,22 +8,22 @@ import {
   SlashCommandBuilder,
   VoiceState,
 } from 'discord.js';
-import { IConfigService } from 'src/config/config.type';
 import { HandleDiscordError } from '../common/aop';
-import { LoggerServiceKey, ILoggerService } from '../common/logger/logger.interface';
-import { ConfigServiceKey } from '../config/config.service';
-import { DiscordClientService } from './client/client.service';
-import { DiscordCommandService } from './command/command.service';
-import { DiscordEventService } from './event/event.service';
+import { ILoggerService, LoggerServiceKey } from '../common/modules/logger/logger.interface';
+import { ConfigServiceKey } from '../common/modules/config/config.service';
+import { IConfigService } from '../common/modules/config/config.type';
+import { DiscordClientAdapter } from './infrastructure/discord-client/discord-client.adapter';
+import { CommandHandler } from './presentation/commands/command.handler';
+import { EventHandler } from './presentation/events/event.handler';
 
 @Injectable()
 export class DiscordService {
   constructor(
     @Inject(ConfigServiceKey)
     private readonly configService: IConfigService,
-    private readonly discordClientService: DiscordClientService,
-    private readonly discordCommandService: DiscordCommandService,
-    private readonly discordEventService: DiscordEventService,
+    private readonly discordClient: DiscordClientAdapter,
+    private readonly commandHandler: CommandHandler,
+    private readonly eventHandler: EventHandler,
     @Inject(LoggerServiceKey)
     private readonly logger: ILoggerService,
   ) {
@@ -36,21 +36,13 @@ export class DiscordService {
     );
   }
 
-  //TODO: make register method
-  private registerCommands(command: string, handlerFunction: (...args: any[]) => Promise<any>) {
-    this.discordClientService.commands.set(
-      command,
-      (payload: Message | ChatInputCommandInteraction) => handlerFunction(payload),
-    );
-  }
-
   @HandleDiscordError()
-  private async init() {
-    await this.discordClientService.init();
+  private async init(): Promise<void> {
+    await this.discordClient.init();
 
-    //commands
     const slashCommands = [];
 
+    // Play command
     const playCommand = new SlashCommandBuilder()
       .setName('play')
       .setDescription('Plays music with url or search parameter')
@@ -58,108 +50,108 @@ export class DiscordService {
         option.setName('input').setDescription('url or search text').setRequired(true),
       );
     slashCommands.push(playCommand.toJSON());
-    this.discordClientService.commands.set('p', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.play(payload),
+    this.discordClient.commands.set('p', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.play(payload),
     );
-    this.discordClientService.commands.set(
-      playCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.play(payload),
+    this.discordClient.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.play(payload),
     );
 
+    // Shuffle command
     const shuffleCommand = new SlashCommandBuilder()
       .setName('shuffle')
       .setDescription('Shuffle songs currently available in queue');
     slashCommands.push(shuffleCommand.toJSON());
-    this.discordClientService.commands.set('sh', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.shuffle(payload),
+    this.discordClient.commands.set('sh', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.shuffle(payload),
     );
-    this.discordClientService.commands.set(
-      shuffleCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) =>
-        this.discordCommandService.shuffle(payload),
+    this.discordClient.commands.set(shuffleCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.shuffle(payload),
     );
 
+    // Empty queue command
     const emptyQueueCommand = new SlashCommandBuilder()
       .setName('empty')
       .setDescription('Empty music queue');
     slashCommands.push(emptyQueueCommand.toJSON());
-    this.discordClientService.commands.set('eq', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.emptyQueue(payload),
+    this.discordClient.commands.set('eq', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.emptyQueue(payload),
     );
-    this.discordClientService.commands.set(
-      emptyQueueCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) =>
-        this.discordCommandService.emptyQueue(payload),
+    this.discordClient.commands.set(emptyQueueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.emptyQueue(payload),
     );
 
-    const helpCommand = new SlashCommandBuilder().setName('help').setDescription('Show commands');
+    // Help command
+    const helpCommand = new SlashCommandBuilder()
+      .setName('help')
+      .setDescription('Show commands');
     slashCommands.push(helpCommand.toJSON());
-    this.discordClientService.commands.set('h', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.help(payload),
+    this.discordClient.commands.set('h', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.help(payload),
     );
-    this.discordClientService.commands.set(
-      helpCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.help(payload),
+    this.discordClient.commands.set(helpCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.help(payload),
     );
 
+    // Leave command
     const leaveCommand = new SlashCommandBuilder()
       .setName('leave')
       .setDescription('bot leaves voice channel');
     slashCommands.push(leaveCommand.toJSON());
-    this.discordClientService.commands.set('l', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.leave(payload),
+    this.discordClient.commands.set('l', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.leave(payload),
     );
-    this.discordClientService.commands.set(
-      leaveCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.leave(payload),
+    this.discordClient.commands.set(leaveCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.leave(payload),
     );
 
+    // Queue command
     const queueCommand = new SlashCommandBuilder()
       .setName('queue')
       .setDescription('Show music queue');
     slashCommands.push(queueCommand.toJSON());
-    this.discordClientService.commands.set('q', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.queue(payload),
+    this.discordClient.commands.set('q', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.queue(payload),
     );
-    this.discordClientService.commands.set(
-      queueCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.queue(payload),
+    this.discordClient.commands.set(queueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.queue(payload),
     );
 
+    // Skip command
     const skipCommand = new SlashCommandBuilder()
       .setName('skip')
       .setDescription('Skip to next music');
     slashCommands.push(skipCommand.toJSON());
-    this.discordClientService.commands.set('s', (payload: Message | ChatInputCommandInteraction) =>
-      this.discordCommandService.skip(payload),
+    this.discordClient.commands.set('s', (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.skip(payload),
     );
-    this.discordClientService.commands.set(
-      skipCommand.name.toLowerCase(),
-      (payload: Message | ChatInputCommandInteraction) => this.discordCommandService.skip(payload),
+    this.discordClient.commands.set(skipCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
+      this.commandHandler.skip(payload),
     );
 
-    await this.discordClientService.Rest.put(
+    // Register slash commands
+    await this.discordClient.Rest.put(
       Routes.applicationCommands(this.configService.discordConfig.CLIENT_ID),
       { body: slashCommands },
     );
 
-    //events
-    this.discordClientService.discordBotClient.once('ready', (client: Client) =>
-      this.discordEventService.ready(client),
+    // Events
+    this.discordClient.discordBotClient.once('ready', (client: Client) =>
+      this.eventHandler.ready(client),
     );
 
-    this.discordClientService.discordBotClient.on('interactionCreate', (interaction: Interaction) =>
-      this.discordEventService.interactionCreate(interaction),
+    this.discordClient.discordBotClient.on('interactionCreate', (interaction: Interaction) =>
+      this.eventHandler.interactionCreate(interaction),
     );
 
-    this.discordClientService.discordBotClient.on('messageCreate', (message) =>
-      this.discordEventService.messageCreate(message),
+    this.discordClient.discordBotClient.on('messageCreate', (message: Message) =>
+      this.eventHandler.messageCreate(message),
     );
 
-    this.discordClientService.discordBotClient.on(
+    this.discordClient.discordBotClient.on(
       'voiceStateUpdate',
       (oldState: VoiceState, newState: VoiceState) =>
-        this.discordEventService.voiceStateUpdate(oldState, newState),
+        this.eventHandler.voiceStateUpdate(oldState, newState),
     );
   }
 }

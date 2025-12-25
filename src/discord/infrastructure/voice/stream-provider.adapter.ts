@@ -3,16 +3,17 @@ import { createAudioResource, StreamType } from '@discordjs/voice';
 import { Inject, Injectable } from '@nestjs/common';
 import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core';
 import { fetch as undiciFetch, ProxyAgent } from 'undici';
-import { ConfigServiceKey } from '../../../config/config.service';
-import { IConfigService } from '../../../config/config.type';
+import { ConfigServiceKey } from 'src/common/modules/config/config.service';
+import { IConfigService } from 'src/common/modules/config/config.type';
 import { AudioResource } from '../../domain/ports/audio-player.port';
+import { IPoTokenService, PoTokenServicePort } from '../../domain/ports/po-token.port';
 import { IStreamProvider } from '../../domain/ports/stream-provider.port';
 
 @Injectable()
 export class StreamProviderAdapter implements IStreamProvider {
   constructor(
-    @Inject(ConfigServiceKey)
-    private readonly configService: IConfigService,
+    @Inject(ConfigServiceKey) private readonly configService: IConfigService,
+    @Inject(PoTokenServicePort) private readonly poTokenService: IPoTokenService,
   ) {}
 
   private createProxyFetcher(agent: ProxyAgent) {
@@ -27,9 +28,16 @@ export class StreamProviderAdapter implements IStreamProvider {
     const proxyUrl = this.configService.appConfig.PROXY;
     const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
+    const tokenData = this.poTokenService.getPoToken();
+    const poToken = tokenData?.poToken || undefined;
+    const visitorData = tokenData?.visitorData || undefined;
+
     return new YtdlCore({
       clients: ['ios', 'android', 'tv'],
       fetcher: proxyAgent ? this.createProxyFetcher(proxyAgent) : undefined,
+      poToken,
+      visitorData,
+      disablePoTokenAutoGeneration: true,
     });
   }
 

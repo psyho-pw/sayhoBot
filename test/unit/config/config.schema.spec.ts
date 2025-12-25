@@ -3,7 +3,7 @@ import {
   DiscordConfigSchema,
   YoutubeConfigSchema,
   DBConfigSchema,
-} from '../../../src/config/config.schema';
+} from '../../../src/common/modules/config/config.schema';
 
 describe('Config Schema Validation', () => {
   describe('DiscordConfigSchema', () => {

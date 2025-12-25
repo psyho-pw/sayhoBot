@@ -20,8 +20,7 @@ export class PlayMusicUseCase {
 
   constructor(
     private readonly queueStateManager: QueueStateManager,
-    @Inject(StreamProviderPort)
-    private readonly streamProvider: IStreamProvider,
+    @Inject(StreamProviderPort) private readonly streamProvider: IStreamProvider,
     @Inject(VoiceConnectionManagerPort)
     private readonly voiceConnectionManager: IVoiceConnectionManager,
   ) {}
@@ -61,7 +60,7 @@ export class PlayMusicUseCase {
 
     connection.subscribe(player);
     player.play(resource);
-    queueState.setPlaying(true);
+    queueState.isPlaying = true;
   }
 
   private createPlayer(guildId: string, voiceChannel: VoiceChannelInfo): IAudioPlayer {
@@ -73,7 +72,7 @@ export class PlayMusicUseCase {
           if (!queueState.isEmpty) {
             await this.playNext(guildId, voiceChannel);
           } else {
-            queueState.setPlaying(false);
+            queueState.isPlaying = false;
           }
         }
       },

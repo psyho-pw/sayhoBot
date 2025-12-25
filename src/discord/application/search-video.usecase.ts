@@ -14,10 +14,7 @@ export interface SearchVideoResult {
 
 @Injectable()
 export class SearchVideoUseCase {
-  constructor(
-    @Inject(YoutubeSearchPort)
-    private readonly youtubeSearch: IYoutubeSearch,
-  ) {}
+  constructor(@Inject(YoutubeSearchPort) private readonly youtubeSearch: IYoutubeSearch) {}
 
   async searchByQuery(request: SearchVideoRequest): Promise<SearchVideoResult> {
     const videos = await this.youtubeSearch.searchVideos(request.query, request.limit ?? 5);

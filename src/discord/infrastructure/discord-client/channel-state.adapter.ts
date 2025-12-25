@@ -1,11 +1,31 @@
 import { AudioPlayer, VoiceConnection } from '@discordjs/voice';
 import { Injectable } from '@nestjs/common';
 import { InteractionResponse, Message } from 'discord.js';
-import { ChannelState } from './channel-state';
-import { Song } from '../discord.model';
+import { QueueState } from '../../domain/entities/queue-state.entity';
+import { Song } from '../../domain/entities/song.entity';
+
+/**
+ * Discord-specific channel state that extends domain QueueState
+ * with Discord.js infrastructure concerns (connections, messages, etc.)
+ */
+export class ChannelState {
+  readonly queueState = new QueueState();
+  currentInfoMsg: Message | null = null;
+  player: AudioPlayer | null = null;
+  connection: VoiceConnection | null = null;
+  deleteQueue: Map<string, Message | InteractionResponse> = new Map();
+
+  reset(): void {
+    this.queueState.reset();
+    this.currentInfoMsg = null;
+    this.player = null;
+    this.connection = null;
+    this.deleteQueue.clear();
+  }
+}
 
 @Injectable()
-export class ChannelStateManager {
+export class ChannelStateAdapter {
   private readonly states = new Map<string, ChannelState>();
 
   get(guildId: string): ChannelState {
@@ -13,6 +33,10 @@ export class ChannelStateManager {
       this.states.set(guildId, new ChannelState());
     }
     return this.states.get(guildId)!;
+  }
+
+  getQueueState(guildId: string): QueueState {
+    return this.get(guildId).queueState;
   }
 
   has(guildId: string): boolean {
@@ -23,22 +47,26 @@ export class ChannelStateManager {
     this.states.delete(guildId);
   }
 
-  getAll(): Map<string, ChannelState> {
-    return this.states;
+  // Music Queue (delegates to QueueState)
+  getMusicQueue(guildId: string): readonly Song[] {
+    return this.getQueueState(guildId).queue;
   }
 
-  // Music Queue
-  getMusicQueue(guildId: string): Song[] {
-    return this.get(guildId).musicQueue;
+  addToQueue(guildId: string, song: Song): void {
+    this.getQueueState(guildId).addSong(song);
   }
 
-  setMusicQueue(guildId: string, queue: Song[]): void {
-    this.get(guildId).musicQueue = queue;
+  addSongsToQueue(guildId: string, songs: Song[]): void {
+    this.getQueueState(guildId).addSongs(songs);
+  }
+
+  clearQueue(guildId: string): void {
+    this.getQueueState(guildId).clear();
   }
 
   shuffleMusicQueue(guildId: string): void {
-    const state = this.get(guildId);
-    const queue = state.musicQueue;
+    const queueState = this.getQueueState(guildId);
+    const queue = [...queueState.queue];
 
     if (queue.length <= 1) return;
 
@@ -50,29 +78,30 @@ export class ChannelStateManager {
       [queue[i], queue[j]] = [queue[j], queue[i]];
     }
 
-    queue.unshift(current);
-    state.musicQueue = queue;
+    queueState.clear();
+    queueState.addSong(current);
+    queueState.addSongs(queue);
   }
 
   // Playing State
   getIsPlaying(guildId: string): boolean {
-    return this.get(guildId).isPlaying;
+    return this.getQueueState(guildId).isPlaying;
   }
 
   setIsPlaying(guildId: string, isPlaying: boolean): void {
-    this.get(guildId).isPlaying = isPlaying;
+    this.getQueueState(guildId).isPlaying = isPlaying;
   }
 
   // Volume
   getVolume(guildId: string): number {
-    return this.get(guildId).volume;
+    return this.getQueueState(guildId).volume;
   }
 
   setVolume(guildId: string, volume: number): void {
-    this.get(guildId).volume = volume;
+    this.getQueueState(guildId).volume = volume;
   }
 
-  // Player
+  // Player (infrastructure concern)
   getPlayer(guildId: string): AudioPlayer | null {
     return this.get(guildId).player;
   }
@@ -85,7 +114,7 @@ export class ChannelStateManager {
     this.get(guildId).player = null;
   }
 
-  // Connection
+  // Connection (infrastructure concern)
   getConnection(guildId: string): VoiceConnection | null {
     return this.get(guildId).connection;
   }
@@ -98,7 +127,7 @@ export class ChannelStateManager {
     this.get(guildId).connection = null;
   }
 
-  // Current Info Message
+  // Current Info Message (infrastructure concern)
   getCurrentInfoMsg(guildId: string): Message | null {
     return this.get(guildId).currentInfoMsg;
   }
@@ -113,7 +142,7 @@ export class ChannelStateManager {
     state.currentInfoMsg = null;
   }
 
-  // Delete Queue
+  // Delete Queue (infrastructure concern)
   addToDeleteQueue(guildId: string, message: Message | InteractionResponse): void {
     this.get(guildId).deleteQueue.set(message.id, message);
   }

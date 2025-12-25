@@ -1,8 +1,8 @@
 import { Injectable, ValidationPipe, ValidationPipeOptions, Inject } from '@nestjs/common';
 import { ValidatorOptions, ValidationError } from 'class-validator';
-import { ClsServiceKey } from '../cls/cls.module';
-import { IClsService } from '../cls/cls.type';
-import { LoggerServiceKey, ILoggerService } from '../logger/logger.interface';
+import { ClsServiceKey } from '../modules/cls/cls.module';
+import { IClsService } from '../modules/cls/cls.type';
+import { LoggerServiceKey, ILoggerService } from '../modules/logger/logger.interface';
 
 @Injectable()
 export class GlobalValidationPipe extends ValidationPipe {

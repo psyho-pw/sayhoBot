@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Aspect, LazyDecorator, WrapParams, createDecorator } from '@toss/nestjs-aop';
-import { ConfigServiceKey } from 'src/config/config.service';
-import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
-import { DiscordNotificationService } from '../../discord/notification/notification.service';
+import { INotificationService, NotificationPort } from '../../discord/domain/ports/notification.port';
 import { GeneralException } from '../exceptions/general.exception';
-import { ILoggerService, LoggerServiceKey } from '../logger/logger.interface';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
+import { ILoggerService, LoggerServiceKey } from '../modules/logger/logger.interface';
 
 export const DiscordErrorHandlerKey = Symbol('DiscordErrorHandler');
 
@@ -20,7 +20,8 @@ export const HandleDiscordError = (options?: HandleDiscordErrorOptions) =>
 @Injectable()
 export class DiscordErrorAspect implements LazyDecorator<any, HandleDiscordErrorOptions> {
   constructor(
-    private readonly notificationService: DiscordNotificationService,
+    @Inject(NotificationPort)
+    private readonly notificationService: INotificationService,
     @Inject(LoggerServiceKey) private readonly loggerService: ILoggerService,
     @Inject(ConfigServiceKey) private readonly configService: IConfigService,
   ) {}

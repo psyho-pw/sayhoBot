@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WinstonModuleOptionsFactory } from 'nest-winston';
 import winston from 'winston';
-import { IConfigService } from 'src/config/config.type';
-import { ConfigServiceKey } from '../../config/config.service';
 import { Env } from '../../constants';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
 
 @Injectable()
 export class WinstonConfigService implements WinstonModuleOptionsFactory {

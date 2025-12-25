@@ -1,7 +1,7 @@
 import * as process from 'process';
 import micromatch from 'micromatch';
 import { Configs } from './config.type';
-import pkg from '../../package.json';
+import pkg from '../../../../package.json';
 
 export const configs = (): Configs => {
   const currentEnv = process.env.NODE_ENV || 'local';

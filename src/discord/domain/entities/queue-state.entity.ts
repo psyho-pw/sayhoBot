@@ -1,56 +1,56 @@
 import { Song } from './song.entity';
 
 export class QueueState {
-  private _queue: Song[] = [];
-  private _isPlaying = false;
-  private _volume = 1;
+  #queue: Song[] = [];
+  #isPlaying = false;
+  #volume = 1;
 
   get queue(): readonly Song[] {
-    return this._queue;
+    return this.#queue;
   }
 
   get currentSong(): Song | undefined {
-    return this._queue[0];
+    return this.#queue[0];
   }
 
   get isPlaying(): boolean {
-    return this._isPlaying;
+    return this.#isPlaying;
   }
 
   get volume(): number {
-    return this._volume;
+    return this.#volume;
   }
 
   get isEmpty(): boolean {
-    return this._queue.length === 0;
+    return this.#queue.length === 0;
   }
 
   get length(): number {
-    return this._queue.length;
+    return this.#queue.length;
   }
 
   addSong(song: Song): void {
-    this._queue.push(song);
+    this.#queue.push(song);
   }
 
   addSongs(songs: Song[]): void {
-    this._queue.push(...songs);
+    this.#queue.push(...songs);
   }
 
   removeCurrent(): Song | undefined {
-    return this._queue.shift();
+    return this.#queue.shift();
   }
 
   clear(): void {
-    this._queue = [];
+    this.#queue = [];
   }
 
-  setPlaying(playing: boolean): void {
-    this._isPlaying = playing;
+  set isPlaying(value: boolean) {
+    this.#isPlaying = value;
   }
 
-  setVolume(volume: number): void {
-    this._volume = Math.max(0, Math.min(2, volume));
+  set volume(volume: number) {
+    this.#volume = Math.max(0, Math.min(2, volume));
   }
 
   skip(): Song | undefined {
@@ -58,8 +58,8 @@ export class QueueState {
   }
 
   reset(): void {
-    this._queue = [];
-    this._isPlaying = false;
-    this._volume = 1;
+    this.#queue = [];
+    this.#isPlaying = false;
+    this.#volume = 1;
   }
 }

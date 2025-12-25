@@ -9,16 +9,17 @@ import {
 } from '@nestjs/common';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ConfigServiceKey } from 'src/config/config.service';
-import { IConfigService } from 'src/config/config.type';
 import { Env } from 'src/constants';
-import { DiscordNotificationService } from 'src/discord/notification/notification.service';
-import { LoggerServiceKey, ILoggerService } from '../logger/logger.interface';
+import { INotificationService, NotificationPort } from 'src/discord/domain/ports/notification.port';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
+import { ILoggerService, LoggerServiceKey } from '../modules/logger/logger.interface';
 
 @Injectable()
 export class ErrorInterceptor implements NestInterceptor {
   constructor(
-    private discordService: DiscordNotificationService,
+    @Inject(NotificationPort)
+    private notificationService: INotificationService,
     @Inject(LoggerServiceKey) private readonly logger: ILoggerService,
     @Inject(ConfigServiceKey) private readonly configService: IConfigService,
   ) {}
@@ -61,7 +62,7 @@ export class ErrorInterceptor implements NestInterceptor {
 
         const env = this.configService.appConfig.ENV;
         if (env === Env.production) {
-          this.discordService
+          this.notificationService
             .sendMessage(err.message, context.getArgs()[0].route.path, [
               {
                 name: 'call method',
@@ -69,7 +70,7 @@ export class ErrorInterceptor implements NestInterceptor {
               },
               { name: 'stack', value: err.stack.substring(0, 1024) },
             ])
-            .catch((error) =>
+            .catch((error: Error) =>
               this.logger.error({
                 ctx: this.intercept.name,
                 info: error,

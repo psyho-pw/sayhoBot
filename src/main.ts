@@ -4,9 +4,9 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { initializeTransactionalContext } from 'typeorm-transactional';
 import { AppModule } from './app.module';
-import { LoggerServiceKey, ILoggerService } from './common/logger/logger.interface';
-import { ConfigServiceKey } from './config/config.service';
-import { IConfigService } from './config/config.type';
+import { ConfigServiceKey } from './common/modules/config/config.service';
+import { IConfigService } from './common/modules/config/config.type';
+import { LoggerServiceKey, ILoggerService } from './common/modules/logger/logger.interface';
 
 async function bootstrap() {
   initializeTransactionalContext();

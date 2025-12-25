@@ -1,35 +1,20 @@
 import { ClassSerializerInterceptor, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AopModule } from '@toss/nestjs-aop';
-import { WinstonModule } from 'nest-winston';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ClsGuard } from 'nestjs-cls';
 import { DataSource } from 'typeorm';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { AppController } from './app.controller';
-import { ClsModule } from './common/cls/cls.module';
-import { TypeormConfigService } from './common/configServices/typeorm.config.service';
-import { WinstonConfigService } from './common/configServices/winston.config.service';
 import { RequestIdGuard } from './common/guard/request-id.guard';
 import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { RequestLogInterceptor } from './common/interceptors/request-log.interceptor';
-import { LoggerModule } from './common/logger/logger.module';
+import { CommonModule } from './common/modules/common.module';
 import { GlobalValidationPipe } from './common/pipe/global-validation.pipe';
-import { AppConfigModule } from './config/config.module';
 import { DiscordModule } from './discord/discord.module';
 import { SongModule } from './song/song.module';
 
 @Module({
-  imports: [
-    ClsModule,
-    AppConfigModule,
-    TypeOrmModule.forRootAsync({ useClass: TypeormConfigService }),
-    WinstonModule.forRootAsync({ useClass: WinstonConfigService }),
-    AopModule,
-    DiscordModule,
-    SongModule,
-    LoggerModule,
-  ],
+  imports: [CommonModule, ScheduleModule.forRoot(), DiscordModule, SongModule],
   controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: ClsGuard },

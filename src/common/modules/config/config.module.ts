@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ClsModule } from 'nestjs-cls';
 import { configs } from './config';
 import { ConfigServiceKey, TypedConfigService } from './config.service';
-import { LoggerModule } from '../common/logger/logger.module';
+import { LoggerModule } from '../logger/logger.module';
 
 @Global()
 @Module({
@@ -16,12 +16,7 @@ import { LoggerModule } from '../common/logger/logger.module';
     LoggerModule,
     ClsModule,
   ],
-  providers: [
-    {
-      provide: ConfigServiceKey,
-      useClass: TypedConfigService,
-    },
-  ],
+  providers: [{ provide: ConfigServiceKey, useClass: TypedConfigService }],
   exports: [ConfigServiceKey],
 })
 export class AppConfigModule {}

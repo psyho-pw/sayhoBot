@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import Youtube from 'simple-youtube-api';
-import { ConfigServiceKey } from '../../../config/config.service';
-import { IConfigService } from '../../../config/config.type';
+import { ConfigServiceKey } from 'src/common/modules/config/config.service';
+import { IConfigService } from 'src/common/modules/config/config.type';
 import { IYoutubeSearch, PlaylistInfo, VideoInfo } from '../../domain/ports/youtube-search.port';
 
 @Injectable()
