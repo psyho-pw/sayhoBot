@@ -1,9 +1,9 @@
 // @ts-ignore
 import Youtube from 'simple-youtube-api/src/index.js'
-import {Inject, Injectable} from '@nestjs/common'
-import {DiscordClientService} from './discord.client.service'
-import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
-import {Logger} from 'winston'
+import { Inject, Injectable } from '@nestjs/common'
+import { DiscordClientService } from './discord.client.service'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
+import { Logger } from 'winston'
 import {
     Channel,
     Client,
@@ -16,11 +16,11 @@ import {
     Snowflake,
     VoiceState,
 } from 'discord.js'
-import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
-import {DiscordEventException} from '../common/exceptions/discord/discord.event.exception'
-import {AppConfigService} from '../config/config.service'
-import {Song} from './discord.model'
-import {SimpleYoutubeAPI} from './discord.type'
+import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
+import { DiscordEventException } from '../common/exceptions/discord/discord.event.exception'
+import { AppConfigService } from '../config/config.service'
+import { Song } from './discord.model'
+import { SimpleYoutubeAPI } from './discord.type'
 
 @Injectable()
 export class DiscordEventService {

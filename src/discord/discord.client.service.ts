@@ -27,7 +27,8 @@ import {
 import { HttpService } from '@nestjs/axios'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { Logger } from 'winston'
-import ytdl from '@distube/ytdl-core'
+import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core'
+import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { DiscordNotificationService } from './discord.notification.service'
 import { AppConfigService } from '../config/config.service'
 import { SongService } from '../song/song.service'
@@ -302,22 +303,28 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.musicQueue.set(guildId, musicQueue)
 
-        const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
+        const proxyUrl = this.configService.getAppConfig().PROXY
+        const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
 
-        // const validate = ytdl.validateURL(musicQueue[0].url)
-        // if (!validate) {
-        //     this.logger.error('Please input a **valid** URL.')
-        //     await channel.send('Please input a **valid** URL.')
-        // }
+        const createProxyFetcher = (agent: ProxyAgent) => {
+            return (url: URL | RequestInfo, options?: RequestInit): Promise<Response> =>
+                undiciFetch(url.toString(), {
+                    ...((options ?? {}) as Record<string, unknown>),
+                    dispatcher: agent,
+                }) as Promise<Response>
+        }
 
-        const stream = ytdl(musicQueue[0].videoId, {
-            filter: 'audioonly',
-            quality: 'highestaudio',
-            highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
-            liveBuffer: 4000,
-            agent,
-        }).on('error', async (error: any) => {
-            this.logger.error('ytdl create readable stream error', error)
+        const ytdl = new YtdlCore({
+            clients: ['ios', 'android', 'tv'],
+            fetcher: proxyAgent ? createProxyFetcher(proxyAgent) : undefined,
+        })
+        const webStream = await ytdl.download(musicQueue[0].url, {
+            filter: 'audioandvideo',
+        })
+        const stream = toPipeableStream(webStream)
+
+        stream.on('error', async (error: any) => {
+            this.logger.error('ytdl stream error', error)
             await this.discordNotificationService.sendErrorReport(error)
         })
 

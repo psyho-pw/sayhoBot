@@ -1,8 +1,8 @@
 //@ts-ignore
 import Youtube from 'simple-youtube-api'
-import {Inject, Injectable} from '@nestjs/common'
-import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
-import {Logger} from 'winston'
+import { Inject, Injectable } from '@nestjs/common'
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
+import { Logger } from 'winston'
 import {
     ChatInputCommandInteraction,
     EmbedBuilder,
@@ -13,14 +13,14 @@ import {
     TextChannel,
     VoiceChannel,
 } from 'discord.js'
-import {DiscordClientService} from './discord.client.service'
-import {APIEmbedField} from 'discord-api-types/v10'
-import {DiscordNotificationService} from './discord.notification.service'
-import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
-import {DiscordCommandException} from '../common/exceptions/discord/discord.command.exception'
-import {AppConfigService} from '../config/config.service'
-import {ParsedPlayCommand, SelectListItem, Song} from './discord.model'
-import {SimpleYoutubeAPI} from './discord.type'
+import { DiscordClientService } from './discord.client.service'
+import { APIEmbedField } from 'discord-api-types/v10'
+import { DiscordNotificationService } from './discord.notification.service'
+import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
+import { DiscordCommandException } from '../common/exceptions/discord/discord.command.exception'
+import { AppConfigService } from '../config/config.service'
+import { ParsedPlayCommand, SelectListItem, Song } from './discord.model'
+import { SimpleYoutubeAPI } from './discord.type'
 
 @Injectable()
 export class DiscordCommandService {
@@ -172,9 +172,10 @@ export class DiscordCommandService {
         searchTxt = searchTxt.trim()
         this.logger.debug(`searchTxt: ${searchTxt}`)
         const results = await this.youtube.searchVideos(searchTxt, 10)
-        //TODO assert type of simple-youtube-api response
 
         const list = results.flatMap((item): SelectListItem[] => {
+            if (item.type === 'channel') return []
+
             const selectListItem = new SelectListItem()
             selectListItem.label = item.title.slice(0, 100)
             selectListItem.description = item.description.slice(0, 100)
