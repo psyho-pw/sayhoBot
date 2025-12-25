@@ -54,7 +54,6 @@ export default [
           singleQuote: true,
           trailingComma: 'all',
           printWidth: 100,
-          bracketSpacing: false,
           tabWidth: 2,
           endOfLine: 'auto',
         },

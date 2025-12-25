@@ -1,36 +1,36 @@
-import {StageChannel, VoiceChannel} from 'discord.js';
+import { StageChannel, VoiceChannel } from 'discord.js';
 
 export class Song {
-    duration: string | null;
+  duration: string | null;
 
-    thumbnail: string;
+  thumbnail: string;
 
-    title: string;
+  title: string;
 
-    url: string;
+  url: string;
 
-    video: any;
+  video: any;
 
-    videoId: string;
+  videoId: string;
 
-    voiceChannel: VoiceChannel | StageChannel;
+  voiceChannel: VoiceChannel | StageChannel;
 }
 
 export class ParsedPlayCommand {
-    content: string;
+  content: string;
 
-    voiceChannel: VoiceChannel | StageChannel;
+  voiceChannel: VoiceChannel | StageChannel;
 
-    constructor(content: string, voiceChannel: VoiceChannel | StageChannel) {
-        this.content = content;
-        this.voiceChannel = voiceChannel;
-    }
+  constructor(content: string, voiceChannel: VoiceChannel | StageChannel) {
+    this.content = content;
+    this.voiceChannel = voiceChannel;
+  }
 }
 
 export class SelectListItem {
-    label: string;
+  label: string;
 
-    description: string;
+  description: string;
 
-    value: string;
+  value: string;
 }

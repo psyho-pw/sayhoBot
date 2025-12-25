@@ -1,9 +1,9 @@
-import {IsString} from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateSongDto {
-    @IsString()
-    url: string;
+  @IsString()
+  url: string;
 
-    @IsString()
-    title: string;
+  @IsString()
+  title: string;
 }

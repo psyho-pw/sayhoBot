@@ -23,8 +23,8 @@ import { SongModule } from './song/song.module';
   imports: [
     ClsModule,
     AppConfigModule,
-    TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
-    WinstonModule.forRootAsync({useClass: WinstonConfigService}),
+    TypeOrmModule.forRootAsync({ useClass: TypeormConfigService }),
+    WinstonModule.forRootAsync({ useClass: WinstonConfigService }),
     AopModule,
     DiscordModule,
     SongModule,
@@ -32,12 +32,12 @@ import { SongModule } from './song/song.module';
   ],
   controllers: [AppController],
   providers: [
-    {provide: APP_GUARD, useClass: ClsGuard},
-    {provide: APP_GUARD, useClass: RequestIdGuard},
-    {provide: APP_PIPE, useClass: GlobalValidationPipe},
-    {provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor},
-    {provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor},
-    {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor},
+    { provide: APP_GUARD, useClass: ClsGuard },
+    { provide: APP_GUARD, useClass: RequestIdGuard },
+    { provide: APP_PIPE, useClass: GlobalValidationPipe },
+    { provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ErrorInterceptor },
   ],
 })
 export class AppModule implements NestModule {
