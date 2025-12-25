@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DiscordClientService } from './discord.client.service';
 import { DiscordCommandService } from './discord.command.service';
 import { DiscordEventService } from './discord.event.service';
-import { DiscordNotificationService } from './discord.notification.service';
 import {
   ChatInputCommandInteraction,
   Client,
@@ -30,7 +29,6 @@ export class DiscordService {
     private readonly discordClientService: DiscordClientService,
     private readonly discordCommandService: DiscordCommandService,
     private readonly discordEventService: DiscordEventService,
-    private readonly discordNotificationService: DiscordNotificationService,
     @Inject(LoggerServiceKey)
     private readonly logger: ILoggerService,
   ) {
