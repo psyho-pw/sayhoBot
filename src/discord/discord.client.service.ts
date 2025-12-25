@@ -27,7 +27,7 @@ import {
 import { HttpService } from '@nestjs/axios'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { Logger } from 'winston'
-import ytdl from '@distube/ytdl-core'
+import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core'
 import { DiscordNotificationService } from './discord.notification.service'
 import { AppConfigService } from '../config/config.service'
 import { SongService } from '../song/song.service'
@@ -302,22 +302,16 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.musicQueue.set(guildId, musicQueue)
 
-        const agent = ytdl.createProxyAgent({uri: this.configService.getAppConfig().PROXY})
+        const ytdl = new YtdlCore({
+            clients: ['ios', 'android', 'tv'],
+        })
+        const webStream = await ytdl.download(musicQueue[0].url, {
+            filter: 'audioandvideo',
+        })
+        const stream = toPipeableStream(webStream)
 
-        // const validate = ytdl.validateURL(musicQueue[0].url)
-        // if (!validate) {
-        //     this.logger.error('Please input a **valid** URL.')
-        //     await channel.send('Please input a **valid** URL.')
-        // }
-
-        const stream = ytdl(musicQueue[0].videoId, {
-            filter: 'audioonly',
-            quality: 'highestaudio',
-            highWaterMark: 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
-            liveBuffer: 4000,
-            agent,
-        }).on('error', async (error: any) => {
-            this.logger.error('ytdl create readable stream error', error)
+        stream.on('error', async (error: any) => {
+            this.logger.error('ytdl stream error', error)
             await this.discordNotificationService.sendErrorReport(error)
         })
 
