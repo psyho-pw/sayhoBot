@@ -1,46 +1,55 @@
-import {Injectable} from '@nestjs/common'
-import {utilities, WinstonModuleOptionsFactory} from 'nest-winston'
-import winston from 'winston'
-import winstonDaily from 'winston-daily-rotate-file'
-import {AppConfigService} from 'src/config/config.service'
+import { Inject, Injectable } from '@nestjs/common';
+import { WinstonModuleOptionsFactory } from 'nest-winston';
+import winston from 'winston';
+import { Env } from '../../constants';
+import { ConfigServiceKey } from '../modules/config/config.service';
+import { IConfigService } from '../modules/config/config.type';
 
 @Injectable()
 export class WinstonConfigService implements WinstonModuleOptionsFactory {
-    constructor(private configService: AppConfigService) {}
+  constructor(
+    @Inject(ConfigServiceKey)
+    private readonly configService: IConfigService,
+  ) {}
 
-    createWinstonModuleOptions() {
-        const appConfig = this.configService.getAppConfig()
-        const nodeEnv = appConfig.ENV
-        const serviceName = appConfig.NAME
-        return {
-            transports: [
-                new winston.transports.Console({
-                    level: nodeEnv === 'production' ? 'silly' : 'silly',
-                    format: winston.format.combine(
-                        winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss'}),
-                        winston.format.colorize(),
-                        utilities.format.nestLike(serviceName || 'test', {
-                            prettyPrint: true,
-                            colors: true,
-                        }),
-                    ),
-                }),
-                new winstonDaily({
-                    level: 'debug',
-                    datePattern: 'YYYY-MM-DD',
-                    dirname: 'logs',
-                    filename: `%DATE%.log`,
-                    format: winston.format.combine(
-                        winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss'}),
-                        winston.format.colorize(),
-                        utilities.format.nestLike(serviceName || 'test', {
-                            prettyPrint: true,
-                        }),
-                    ),
-                    maxFiles: 30, // 30일치 로그 파일 저장
-                    zippedArchive: true,
-                }),
-            ],
-        }
+  createWinstonModuleOptions() {
+    const nodeEnv = this.configService.appConfig.ENV;
+    const serviceName = this.configService.appConfig.NAME;
+
+    const transports: winston.transport[] = [];
+
+    if (nodeEnv !== Env.production) {
+      transports.push(
+        new winston.transports.Console({
+          level: 'silly',
+          format: winston.format.combine(
+            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            winston.format.colorize(),
+            winston.format.printf(({ level, message, context, timestamp, stack, ...meta }) => {
+              const contextStr = context ? `[${context}] ` : '';
+              const stackStr = stack ? `\n${stack}` : '';
+              const metaStr =
+                meta && Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+
+              return `${timestamp} ${level}: ${contextStr}${message}${metaStr}${stackStr}`;
+            }),
+          ),
+        }),
+      );
+    } else {
+      transports.push(
+        new winston.transports.Console({
+          level: 'info',
+          format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+        }),
+      );
     }
+
+    return {
+      defaultMeta: {
+        service: serviceName,
+      },
+      transports,
+    };
+  }
 }

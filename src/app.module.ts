@@ -1,40 +1,36 @@
-import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common'
-import {AppConfigModule} from './config/config.module'
-import {TypeOrmModule} from '@nestjs/typeorm'
-import {TypeormConfigService} from './common/configServices/typeorm.config.service'
-import {WinstonConfigService} from './common/configServices/winston.config.service'
-import {WinstonModule} from 'nest-winston'
-import {DiscordModule} from './discord/discord.module'
-import {addTransactionalDataSource} from 'typeorm-transactional'
-import {DataSource} from 'typeorm'
-import {LoggerMiddleware} from './common/middlewares/logger.middleware'
-import {APP_INTERCEPTOR} from '@nestjs/core'
-import {ErrorInterceptor} from './common/interceptors/error.interceptor'
-import {AppController} from './app.controller'
-import {SongModule} from './song/song.module'
+import { ClassSerializerInterceptor, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ClsGuard } from 'nestjs-cls';
+import { DataSource } from 'typeorm';
+import { addTransactionalDataSource } from 'typeorm-transactional';
+import { AppController } from './app.controller';
+import { RequestIdGuard } from './common/guard/request-id.guard';
+import { ErrorInterceptor } from './common/interceptors/error.interceptor';
+import { RequestLogInterceptor } from './common/interceptors/request-log.interceptor';
+import { CommonModule } from './common/modules/common.module';
+import { GlobalValidationPipe } from './common/pipe/global-validation.pipe';
+import { DiscordModule } from './discord/discord.module';
+import { SongModule } from './song/song.module';
 
 @Module({
-    imports: [
-        AppConfigModule,
-        TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
-        WinstonModule.forRootAsync({useClass: WinstonConfigService}),
-        DiscordModule,
-        SongModule,
-    ],
-    controllers: [AppController],
-    providers: [
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: ErrorInterceptor,
-        },
-    ],
+  imports: [CommonModule, ScheduleModule.forRoot(), DiscordModule, SongModule],
+  controllers: [AppController],
+  providers: [
+    { provide: APP_GUARD, useClass: ClsGuard },
+    { provide: APP_GUARD, useClass: RequestIdGuard },
+    { provide: APP_PIPE, useClass: GlobalValidationPipe },
+    { provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ErrorInterceptor },
+  ],
 })
 export class AppModule implements NestModule {
-    constructor(private dataSource: DataSource) {
-        addTransactionalDataSource(this.dataSource)
-    }
+  constructor(private dataSource: DataSource) {
+    addTransactionalDataSource(this.dataSource);
+  }
 
-    configure(consumer: MiddlewareConsumer): void {
-        consumer.apply(LoggerMiddleware).forRoutes('/')
-    }
+  configure(_consumer: MiddlewareConsumer): void {
+    // _consumer.apply(LoggerMiddleware).forRoutes('/');
+  }
 }
