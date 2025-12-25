@@ -9,12 +9,12 @@ import {
   VoiceState,
 } from 'discord.js';
 import { HandleDiscordError } from '../common/aop';
-import { ILoggerService, LoggerServiceKey } from '../common/modules/logger/logger.interface';
-import { ConfigServiceKey } from '../common/modules/config/config.service';
-import { IConfigService } from '../common/modules/config/config.type';
 import { DiscordClientAdapter } from './infrastructure/discord-client/discord-client.adapter';
 import { CommandHandler } from './presentation/commands/command.handler';
 import { EventHandler } from './presentation/events/event.handler';
+import { ConfigServiceKey } from '../common/modules/config/config.service';
+import { IConfigService } from '../common/modules/config/config.type';
+import { ILoggerService, LoggerServiceKey } from '../common/modules/logger/logger.interface';
 
 @Injectable()
 export class DiscordService {
@@ -53,8 +53,9 @@ export class DiscordService {
     this.discordClient.commands.set('p', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.play(payload),
     );
-    this.discordClient.commands.set(playCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.play(payload),
+    this.discordClient.commands.set(
+      playCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.play(payload),
     );
 
     // Shuffle command
@@ -65,8 +66,9 @@ export class DiscordService {
     this.discordClient.commands.set('sh', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.shuffle(payload),
     );
-    this.discordClient.commands.set(shuffleCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.shuffle(payload),
+    this.discordClient.commands.set(
+      shuffleCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.shuffle(payload),
     );
 
     // Empty queue command
@@ -77,20 +79,20 @@ export class DiscordService {
     this.discordClient.commands.set('eq', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.emptyQueue(payload),
     );
-    this.discordClient.commands.set(emptyQueueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.emptyQueue(payload),
+    this.discordClient.commands.set(
+      emptyQueueCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.emptyQueue(payload),
     );
 
     // Help command
-    const helpCommand = new SlashCommandBuilder()
-      .setName('help')
-      .setDescription('Show commands');
+    const helpCommand = new SlashCommandBuilder().setName('help').setDescription('Show commands');
     slashCommands.push(helpCommand.toJSON());
     this.discordClient.commands.set('h', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.help(payload),
     );
-    this.discordClient.commands.set(helpCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.help(payload),
+    this.discordClient.commands.set(
+      helpCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.help(payload),
     );
 
     // Leave command
@@ -101,8 +103,9 @@ export class DiscordService {
     this.discordClient.commands.set('l', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.leave(payload),
     );
-    this.discordClient.commands.set(leaveCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.leave(payload),
+    this.discordClient.commands.set(
+      leaveCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.leave(payload),
     );
 
     // Queue command
@@ -113,8 +116,9 @@ export class DiscordService {
     this.discordClient.commands.set('q', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.queue(payload),
     );
-    this.discordClient.commands.set(queueCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.queue(payload),
+    this.discordClient.commands.set(
+      queueCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.queue(payload),
     );
 
     // Skip command
@@ -125,8 +129,9 @@ export class DiscordService {
     this.discordClient.commands.set('s', (payload: Message | ChatInputCommandInteraction) =>
       this.commandHandler.skip(payload),
     );
-    this.discordClient.commands.set(skipCommand.name.toLowerCase(), (payload: Message | ChatInputCommandInteraction) =>
-      this.commandHandler.skip(payload),
+    this.discordClient.commands.set(
+      skipCommand.name.toLowerCase(),
+      (payload: Message | ChatInputCommandInteraction) => this.commandHandler.skip(payload),
     );
 
     // Register slash commands

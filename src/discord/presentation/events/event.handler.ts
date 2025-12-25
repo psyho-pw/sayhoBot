@@ -1,4 +1,3 @@
-// @ts-ignore
 import { Inject, Injectable } from '@nestjs/common';
 import {
   Channel,
@@ -14,8 +13,8 @@ import {
 } from 'discord.js';
 import { ConfigServiceKey } from 'src/common/modules/config/config.service';
 import { IConfigService } from 'src/common/modules/config/config.type';
-import { LoggerServiceKey, ILoggerService } from 'src/common/modules/logger/logger.interface';
-import { HandleDiscordError } from '../../../common/aop';
+import { ILoggerService, LoggerServiceKey } from 'src/common/modules/logger/logger.interface';
+import { HandleDiscordError, WithDiscordContext } from '../../../common/aop';
 import { DiscordException } from '../../../common/exceptions/discord.exception';
 import { SearchVideoUseCase } from '../../application/search-video.usecase';
 import { VoiceChannelInfo } from '../../domain/entities/song.entity';
@@ -34,6 +33,7 @@ export class EventHandler {
     this.logger.setContext(EventHandler.name);
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   public async ready(_client: Client): Promise<void> {
     this.logger.verbose({
@@ -46,6 +46,7 @@ export class EventHandler {
     });
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   private async commandHandler(interaction: CommandInteraction): Promise<void> {
     const command = this.discordClient.commands.get(interaction.commandName);
@@ -69,6 +70,7 @@ export class EventHandler {
     }
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   private async selectMenuHandler(interaction: StringSelectMenuInteraction): Promise<void> {
     const selectedUrl = interaction.values[0];
@@ -126,6 +128,7 @@ export class EventHandler {
     }
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   public async interactionCreate(interaction: Interaction): Promise<void> {
     if (interaction.isStringSelectMenu()) {
@@ -135,6 +138,7 @@ export class EventHandler {
     }
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   public async messageCreate(message: Message): Promise<void> {
     this.logger.info({ ctx: this.messageCreate.name, info: `message received ${message.content}` });
@@ -175,6 +179,7 @@ export class EventHandler {
     }
   }
 
+  @WithDiscordContext()
   @HandleDiscordError()
   public async voiceStateUpdate(oldState: VoiceState, newState: VoiceState): Promise<void> {
     if (oldState.channelId !== (oldState.guild.members.me?.voice.channelId || newState.channel)) {

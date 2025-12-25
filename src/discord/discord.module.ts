@@ -1,6 +1,6 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { DiscordErrorAspect } from '../common/aop';
+import { DiscordContextAspect, DiscordErrorAspect } from '../common/aop';
 import { SongModule } from '../song/song.module';
 import { PlayMusicUseCase } from './application/play-music.usecase';
 import { QueueStateManager } from './application/queue-state.manager';
@@ -26,6 +26,7 @@ import { EventHandler } from './presentation/events/event.handler';
   imports: [HttpModule, SongModule],
   providers: [
     // AOP
+    DiscordContextAspect,
     DiscordErrorAspect,
 
     // Application layer
