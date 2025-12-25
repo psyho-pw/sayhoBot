@@ -1,8 +1,18 @@
-import {CorsOptions} from '@nestjs/common/interfaces/external/cors-options.interface'
-import {SessionOptions} from 'express-session'
-import {Request as ExpressRequest} from 'express'
-import {TypeOrmModuleOptions} from '@nestjs/typeorm'
+import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface'
+import { SessionOptions } from 'express-session'
+import { Request as ExpressRequest } from 'express'
+import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 
+export interface IConfigService  {
+    get<T extends keyof Configs>(propertyPath: T): Configs[T]
+    get appConfig(): AppConfig
+    get authConfig(): AuthConfig
+    get dbConfig(): DBConfig
+    get discordConfig(): DiscordConfig
+    get serverConfig(): ServerConfig
+    get youtubeConfig(): YoutubeConfig
+    get awsConfig(): AwsConfig
+}
 export interface AppConfig {
     NAME: string
     VERSION: string
@@ -90,3 +100,5 @@ declare module 'express-session' {
     }
 }
 export type Request = ExpressRequest
+
+

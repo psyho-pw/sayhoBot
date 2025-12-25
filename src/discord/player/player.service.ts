@@ -1,6 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
-import { Logger } from 'winston'
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -19,12 +17,13 @@ import {
     TextChannel,
     VoiceChannel,
 } from 'discord.js'
-import { AppConfigService } from '../../config/config.service'
 import { DiscordNotificationService } from '../discord.notification.service'
 import { ChannelStateManager } from '../state'
 import { HandleDiscordError } from '../../common/aop'
 import { DiscordException } from '../../common/exceptions/discord.exception'
-import { Song } from '../discord.model'
+import { ConfigServiceKey } from 'src/config/config.service'
+import { ILoggerService, LoggerServiceKey } from 'src/common/logger/logger.interface'
+import { IConfigService } from 'src/config/config.type'
 
 export interface PlayContext {
     message: Message | ChatInputCommandInteraction
@@ -35,10 +34,10 @@ export interface PlayContext {
 @Injectable()
 export class PlayerService {
     constructor(
-        private readonly configService: AppConfigService,
+        @Inject(ConfigServiceKey) private readonly configService: IConfigService,
         private readonly notificationService: DiscordNotificationService,
         private readonly stateManager: ChannelStateManager,
-        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+        @Inject(LoggerServiceKey) private readonly logger: ILoggerService,
     ) {}
 
     private async playerWrapper(handler: () => Promise<any>, guildId: string) {
@@ -46,7 +45,7 @@ export class PlayerService {
             await handler()
         } catch (err) {
             const player = this.stateManager.getPlayer(guildId)
-            if (!player) return this.logger.error('player not found')
+            if (!player) return this.logger.error({ctx: this.playerWrapper.name, info: 'player not found'})
             player.emit('error', err)
         }
     }
@@ -71,7 +70,7 @@ export class PlayerService {
 
         const msg = await channel.send({ embeds: [embed] })
         this.stateManager.setCurrentInfoMsg(guildId, msg)
-        this.logger.info(`Currently playing ${currentItem.title}`)
+        this.logger.info({ctx: this.handlePlaying.name, info: currentItem, message: `Currently playing ${currentItem.title}`})
 
         this.stateManager.setIsPlaying(guildId, true)
     }
@@ -87,14 +86,14 @@ export class PlayerService {
         this.stateManager.setIsPlaying(guildId, false)
 
         if (musicQueue.length > 1) {
-            this.logger.debug('queue length is not zero')
+            this.logger.debug({ctx: this.handleIdle.name, info: 'queue length is not zero'})
             musicQueue.shift()
             this.stateManager.setMusicQueue(guildId, musicQueue)
             await onPlayNext()
             return
         }
 
-        this.logger.debug('queue empty')
+        this.logger.debug({ctx: this.handleIdle.name, info: 'queue empty'})
         setTimeout(() => {
             const currentQueue = this.stateManager.getMusicQueue(guildId)
             if (currentQueue.length <= 1 && !this.stateManager.getIsPlaying(guildId)) {
@@ -107,7 +106,7 @@ export class PlayerService {
                     .then(msg =>
                         setTimeout(
                             () => msg.delete(),
-                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
                         ),
                     )
                 this.stateManager.getConnection(guildId)?.destroy()
@@ -119,12 +118,8 @@ export class PlayerService {
     private async handleError(err: any, context: PlayContext) {
         const { guildId, channel } = context
 
-        this.logger.error('fatal error occurred', {
-            name: err.name,
-            message: err.message,
-            stack: err.stack,
-        })
-
+        this.logger.error({ctx: this.handleError.name, info: err, message: 'fatal error occurred'})
+         
         const musicQueue = this.stateManager.getMusicQueue(guildId)
         this.stateManager.setIsPlaying(guildId, false)
         this.stateManager.deleteCurrentInfoMsg(guildId)
@@ -135,7 +130,7 @@ export class PlayerService {
                 .then(msg =>
                     setTimeout(
                         () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
                     ),
                 )
         }
@@ -146,7 +141,7 @@ export class PlayerService {
                 .then(msg =>
                     setTimeout(
                         () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                        this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
                     ),
                 )
         }
@@ -156,7 +151,7 @@ export class PlayerService {
             .then(msg =>
                 setTimeout(
                     () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
+                    this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
                 ),
             )
 

@@ -1,77 +1,56 @@
-import {DiscordConfig, YoutubeConfig} from './config.type'
-import {Injectable, Logger, OnModuleInit} from '@nestjs/common'
-import {ConfigService} from '@nestjs/config'
 import {
     AppConfig,
     AuthConfig,
     AwsConfig,
     Configs,
     DBConfig,
+    DiscordConfig,
+    IConfigService,
     ServerConfig,
-} from 'src/config/config.type'
-import {
-    validateConfig,
-    DiscordConfigSchema,
-    YoutubeConfigSchema,
-    DBConfigSchema,
-} from './config.schema'
+    YoutubeConfig,
+} from './config.type';
+import {Injectable} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
+
+export const ConfigServiceKey = Symbol('ConfigService');
 
 @Injectable()
-export class AppConfigService implements OnModuleInit {
-    private readonly logger = new Logger(AppConfigService.name)
-
+export class TypedConfigService implements IConfigService {
     constructor(private readonly configService: ConfigService<Configs>) {}
 
-    onModuleInit() {
-        this.validateRequiredConfigs()
-    }
-
-    private validateRequiredConfigs(): void {
-        try {
-            const discord = this.configService.get('DISCORD')
-            const youtube = this.configService.get('YOUTUBE')
-            const db = this.configService.get('DB')
-
-            validateConfig(DiscordConfigSchema, discord)
-            validateConfig(YoutubeConfigSchema, youtube)
-            validateConfig(DBConfigSchema, db)
-
-            this.logger.log('Configuration validation passed')
-        } catch (error) {
-            this.logger.error(`Configuration validation failed: ${error.message}`)
-            throw error
+    get<T extends keyof Configs>(propertyPath: T): Configs[T] {
+        const property = this.configService.get(propertyPath);
+        if (property === undefined) {
+            throw new Error(`Configuration property "${String(propertyPath)}" does not exist`);
         }
+        return property;
     }
 
-    get(propertyPath: keyof Configs) {
-        return this.configService.get(propertyPath)
+    get appConfig(): AppConfig {
+        return this.get('APP');
     }
 
-    getAppConfig(): AppConfig {
-        return this.configService.getOrThrow('APP')
+    get authConfig(): AuthConfig {
+        return this.get('AUTH');
     }
 
-    getAuthConfig(): AuthConfig {
-        return this.configService.getOrThrow('AUTH')
+    get dbConfig(): DBConfig {
+        return this.get('DB');
     }
 
-    getDBConfig(): DBConfig {
-        return this.configService.getOrThrow('DB')
+    get discordConfig(): DiscordConfig {
+        return this.get('DISCORD');
     }
 
-    getDiscordConfig(): DiscordConfig {
-        return this.configService.getOrThrow('DISCORD')
+    get serverConfig(): ServerConfig {
+        return this.get('SERVER');
     }
 
-    getServerConfig(): ServerConfig {
-        return this.configService.getOrThrow('SERVER')
+    get youtubeConfig(): YoutubeConfig {
+        return this.get('YOUTUBE');
     }
 
-    getYoutubeConfig(): YoutubeConfig {
-        return this.configService.getOrThrow('YOUTUBE')
-    }
-
-    getAwsConfig(): AwsConfig {
-        return this.configService.getOrThrow('AWS')
+    get awsConfig(): AwsConfig {
+        return this.get('AWS');
     }
 }

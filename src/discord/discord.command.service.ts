@@ -1,8 +1,6 @@
 //@ts-ignore
-import Youtube from 'simple-youtube-api'
-import { Inject, Injectable } from '@nestjs/common'
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
-import { Logger } from 'winston'
+import Youtube from 'simple-youtube-api';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     ChatInputCommandInteraction,
     EmbedBuilder,
@@ -12,512 +10,594 @@ import {
     StageChannel,
     TextChannel,
     VoiceChannel,
-} from 'discord.js'
-import { DiscordClientService } from './discord.client.service'
-import { APIEmbedField } from 'discord-api-types/v10'
-import { DiscordNotificationService } from './discord.notification.service'
-import { HandleDiscordError } from '../common/aop'
-import { DiscordException } from '../common/exceptions/discord.exception'
-import { AppConfigService } from '../config/config.service'
-import { ParsedPlayCommand, SelectListItem, Song } from './discord.model'
-import { SimpleYoutubeAPI } from './discord.type'
+} from 'discord.js';
+import { DiscordClientService } from './discord.client.service';
+import { APIEmbedField } from 'discord-api-types/v10';
+import { DiscordNotificationService } from './discord.notification.service';
+import { HandleDiscordError } from '../common/aop';
+import { DiscordException } from '../common/exceptions/discord.exception';
+import {
+    ConfigServiceKey
+} from '../config/config.service';
+import { ParsedPlayCommand, SelectListItem, Song } from './discord.model';
+import { SimpleYoutubeAPI } from './discord.type';
+import {
+    LoggerServiceKey,
+    ILoggerService,
+} from '../common/logger/logger.interface';
+import { IConfigService } from 'src/config/config.type';
 
 @Injectable()
 export class DiscordCommandService {
-    private readonly youtube: SimpleYoutubeAPI = new Youtube(
-        this.configService.getYoutubeConfig().YOUTUBE_API_KEY,
-    )
+  private readonly youtube: SimpleYoutubeAPI = new Youtube(
+    this.configService.youtubeConfig.YOUTUBE_API_KEY,
+  );
 
-    constructor(
-        private readonly configService: AppConfigService,
-        private readonly discordClientService: DiscordClientService,
-        private readonly discordNotificationService: DiscordNotificationService,
-        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-    ) {}
+  constructor(
+    @Inject(ConfigServiceKey)
+    private readonly configService: IConfigService,
+    private readonly discordClientService: DiscordClientService,
+    private readonly discordNotificationService: DiscordNotificationService,
+    @Inject(LoggerServiceKey)
+    private readonly logger: ILoggerService,
+  ) {
+    this.logger.setContext(DiscordCommandService.name);
+  }
 
-    private getVoiceChannelFromPayload(payload: Message | ChatInputCommandInteraction) {
-        return payload instanceof Message
-            ? payload.member?.voice.channel
-            : payload.guild?.members.cache.get(payload.member?.user.id || '')?.voice.channel
-    }
+  private getVoiceChannelFromPayload(
+    payload: Message | ChatInputCommandInteraction,
+  ) {
+    return payload instanceof Message
+      ? payload.member?.voice.channel
+      : payload.guild?.members.cache.get(payload.member?.user.id || '')?.voice
+          .channel;
+  }
 
-    @HandleDiscordError({ bubble: true })
-    private async playlistHandler(
-        url: string,
-        voiceChannel: VoiceChannel | StageChannel,
-        message: Message | ChatInputCommandInteraction,
-    ) {
-        this.logger.info('Playlist detected')
-        if (!message.guildId) throw new DiscordException('guild is not specified', 'command')
+  @HandleDiscordError({ bubble: true })
+  private async playlistHandler(
+    url: string,
+    voiceChannel: VoiceChannel | StageChannel,
+    message: Message | ChatInputCommandInteraction,
+  ) {
+    this.logger.info({
+      ctx: this.playlistHandler.name,
+      info: 'Playlist detected',
+    });
+    if (!message.guildId)
+      throw new DiscordException('guild is not specified', 'command');
 
-        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
-        const messageChannel = message.channel as TextChannel
-        try {
-            const playlist = await this.youtube.getPlaylist(url)
-            const videos = await playlist.getVideos()
-            if (!videos.length) {
-                return messageChannel
-                    .send('No videos found')
-                    .then(msg =>
-                        setTimeout(
-                            () => msg.delete(),
-                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                        ),
-                    )
-            }
-
-            for (const video of videos) {
-                //TODO type Video.raw
-                if (video.raw.status['privacyStatus'] === 'private') continue
-
-                const song: Song | null = this.discordClientService.formatVideo(video, voiceChannel)
-                if (song) {
-                    musicQueue.push(song)
-                    this.discordClientService.setMusicQueue(message.guildId, musicQueue)
-                }
-            }
-
-            this.logger.info(`queue length: ${musicQueue.length}`)
-            this.logger.info(`next: ${JSON.stringify(musicQueue[0].title)}`)
-
-            const reply = await message.reply({
-                embeds: [
-                    this.discordClientService.formatMessageEmbed(
-                        url,
-                        videos.length,
-                        musicQueue.length,
-                        playlist.title,
-                        videos[0].thumbnails.high.url,
-                    ),
-                ],
-            })
+    const musicQueue = this.discordClientService.getMusicQueue(message.guildId);
+    const messageChannel = message.channel as TextChannel;
+    try {
+      const playlist = await this.youtube.getPlaylist(url);
+      const videos = await playlist.getVideos();
+      if (!videos.length) {
+        return messageChannel
+          .send('No videos found')
+          .then((msg) =>
             setTimeout(
-                () => reply.delete(),
-                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-            )
+              () => msg.delete(),
+              this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+            ),
+          );
+      }
 
-            if (!this.discordClientService.getIsPlaying(message.guildId)) {
-                return this.discordClientService.playSong(message)
-            }
-        } catch (err) {
-            message
-                .reply('Playlist is either private or it does not exist')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-            throw new DiscordException(err.message, 'command')
+      for (const video of videos) {
+        //TODO type Video.raw
+        if (video.raw.status['privacyStatus'] === 'private') continue;
+
+        const song: Song | null = this.discordClientService.formatVideo(
+          video,
+          voiceChannel,
+        );
+        if (song) {
+          musicQueue.push(song);
+          this.discordClientService.setMusicQueue(message.guildId, musicQueue);
         }
+      }
+
+      this.logger.info({
+        ctx: this.playlistHandler.name,
+        info: `queue length: ${musicQueue.length}`,
+      });
+      this.logger.info({
+        ctx: this.playlistHandler.name,
+        info: `next: ${JSON.stringify(musicQueue[0].title)}`,
+      });
+
+      const reply = await message.reply({
+        embeds: [
+          this.discordClientService.formatMessageEmbed(
+            url,
+            videos.length,
+            musicQueue.length,
+            playlist.title,
+            videos[0].thumbnails.high.url,
+          ),
+        ],
+      });
+      setTimeout(
+        () => reply.delete(),
+        this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+      );
+
+      if (!this.discordClientService.getIsPlaying(message.guildId)) {
+        return this.discordClientService.playSong(message);
+      }
+    } catch (err) {
+      message
+        .reply('Playlist is either private or it does not exist')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+      throw new DiscordException(err.message, 'command');
+    }
+  }
+
+  @HandleDiscordError({ bubble: true })
+  private async singleVidHandler(
+    url: string,
+    voiceChannel: VoiceChannel | StageChannel,
+    message: Message | ChatInputCommandInteraction,
+  ) {
+    this.logger.info({
+      ctx: this.singleVidHandler.name,
+      info: 'Single video/song detected',
+    });
+    if (!message.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    const musicQueue = this.discordClientService.getMusicQueue(message.guildId);
+    const video = await this.youtube.getVideo(url);
+    const song: Song | null = this.discordClientService.formatVideo(
+      video,
+      voiceChannel,
+    );
+    if (!song) {
+      return message
+        .reply('Video is either private or it does not exist')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
     }
 
-    @HandleDiscordError({ bubble: true })
-    private async singleVidHandler(
-        url: string,
-        voiceChannel: VoiceChannel | StageChannel,
-        message: Message | ChatInputCommandInteraction,
-    ) {
-        this.logger.info('Single video/song detected')
-        if (!message.guildId) throw new DiscordException('guild is not specified', 'command')
+    musicQueue.push(song);
+    this.discordClientService.setMusicQueue(message.guildId, musicQueue);
 
-        const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
-        const video = await this.youtube.getVideo(url)
-        const song: Song | null = this.discordClientService.formatVideo(video, voiceChannel)
-        if (!song) {
-            return message
-                .reply('Video is either private or it does not exist')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
+    this.logger.info({
+      ctx: this.singleVidHandler.name,
+      info: `Queue length: ${musicQueue.length}`,
+    });
+    this.logger.info({
+      ctx: this.singleVidHandler.name,
+      info: `Current: ${JSON.stringify(musicQueue[0].title)}`,
+    });
 
-        musicQueue.push(song)
-        this.discordClientService.setMusicQueue(message.guildId, musicQueue)
+    await message
+      .reply({
+        embeds: [
+          this.discordClientService.formatMessageEmbed(
+            url,
+            1,
+            musicQueue.length,
+            song.title,
+            song.thumbnail,
+          ),
+        ],
+      })
+      .then((msg) => {
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        );
+      });
 
-        this.logger.info(`Queue length: ${musicQueue.length}`)
-        this.logger.info(`Current: ${JSON.stringify(musicQueue[0].title)}`)
-
-        await message
-            .reply({
-                embeds: [
-                    this.discordClientService.formatMessageEmbed(
-                        url,
-                        1,
-                        musicQueue.length,
-                        song.title,
-                        song.thumbnail,
-                    ),
-                ],
-            })
-            .then(msg => {
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                )
-            })
-
-        if (!this.discordClientService.getIsPlaying(message.guildId)) {
-            return this.discordClientService.playSong(message)
-        }
+    if (!this.discordClientService.getIsPlaying(message.guildId)) {
+      return this.discordClientService.playSong(message);
     }
+  }
 
-    @HandleDiscordError({ bubble: true })
-    private async searchHandler(searchTxt: string, payload: Message | ChatInputCommandInteraction) {
-        this.logger.info('Search detected')
+  @HandleDiscordError({ bubble: true })
+  private async searchHandler(
+    searchTxt: string,
+    payload: Message | ChatInputCommandInteraction,
+  ) {
+    this.logger.info({
+      ctx: this.searchHandler.name,
+      info: 'Search detected',
+    });
 
-        searchTxt = searchTxt.trim()
-        this.logger.debug(`searchTxt: ${searchTxt}`)
-        const results = await this.youtube.searchVideos(searchTxt, 10)
+    searchTxt = searchTxt.trim();
+    this.logger.debug({
+      ctx: this.searchHandler.name,
+      info: `searchTxt: ${searchTxt}`,
+    });
+    const results = await this.youtube.searchVideos(searchTxt, 10);
 
-        const list = results.flatMap((item): SelectListItem[] => {
-            if (item.type === 'channel') return []
+    const list = results.flatMap((item): SelectListItem[] => {
+      if (item.type === 'channel') return [];
 
-            const selectListItem = new SelectListItem()
-            selectListItem.label = item.title.slice(0, 100)
-            selectListItem.description = item.description.slice(0, 100)
-            selectListItem.value = item.url
+      const selectListItem = new SelectListItem();
+      selectListItem.label = item.title.slice(0, 100);
+      selectListItem.description = item.description.slice(0, 100);
+      selectListItem.value = item.url;
 
-            return [selectListItem]
-        })
+      return [selectListItem];
+    });
 
-        const selectList: Message | InteractionResponse = await payload.reply({
-            content: `'${searchTxt}' 검색 결과`,
-            components: [
-                {
-                    type: 1,
-                    components: [
-                        {
-                            type: 3,
-                            custom_id: 'select',
-                            options: list,
-                            placeholder: '재생할 노래 선택',
-                            max_values: 1,
-                        },
-                    ],
-                },
-            ],
-        })
+    const selectList: Message | InteractionResponse = await payload.reply({
+      content: `'${searchTxt}' 검색 결과`,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select',
+              options: list,
+              placeholder: '재생할 노래 선택',
+              max_values: 1,
+            },
+          ],
+        },
+      ],
+    });
 
-        let replyMessage: Message<boolean> | undefined = undefined
-        if (selectList instanceof Message) replyMessage = selectList
-        else if (payload instanceof ChatInputCommandInteraction)
-            replyMessage = await payload.fetchReply()
+    let replyMessage: Message<boolean> | undefined = undefined;
+    if (selectList instanceof Message) replyMessage = selectList;
+    else if (payload instanceof ChatInputCommandInteraction)
+      replyMessage = await payload.fetchReply();
 
-        if (!replyMessage) throw new DiscordException('cannot specify reply message object', 'command')
-        this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
-    }
+    if (!replyMessage)
+      throw new DiscordException(
+        'cannot specify reply message object',
+        'command',
+      );
+    this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage);
+  }
 
-    @HandleDiscordError()
-    private async parsePlayCommand(
-        payload: Message | ChatInputCommandInteraction,
-    ): Promise<ParsedPlayCommand | null> {
-        if (payload instanceof ChatInputCommandInteraction) {
-            const content = payload.options.getString('input') ?? ''
-            if (!content.length) {
-                await payload
-                    .reply(`parameter count doesn't match`)
-                    .then(msg =>
-                        setTimeout(
-                            () => msg.delete(),
-                            this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                        ),
-                    )
-
-                return null
-            }
-
-            const member = payload.guild?.members.cache.get(payload.member?.user.id || '')
-            if (!member) return null
-
-            const voiceChannel = member.voice.channel
-            if (!voiceChannel) return null
-
-            return new ParsedPlayCommand(content, voiceChannel)
-        }
-
-        const args: string[] = payload.content
-            .slice(this.configService.getDiscordConfig().COMMAND_PREFIX.length)
-            .trim()
-            .split(/ +/g)
-        if (args.length < 2) {
-            await payload
-                .reply(`parameter count doesn't match`)
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-
-            return null
-        }
-
-        args.shift()
-        const content = args.join(' ')
-
-        if (!payload.member || !payload.member.voice.channel) return null
-        const voiceChannel = payload.member.voice.channel
-
-        return new ParsedPlayCommand(content, voiceChannel)
-    }
-
-    @HandleDiscordError()
-    public async play(payload: Message | ChatInputCommandInteraction) {
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
-
-        const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
-
-        const parsedCommand = await this.parsePlayCommand(payload)
-        if (!parsedCommand) {
-            return payload
-                .reply('You need to be in a voice channel to play music')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete,
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-
-        const {content, voiceChannel} = parsedCommand
-        this.logger.verbose(JSON.stringify(voiceChannel))
-
-        const permissions = voiceChannel.permissionsFor(payload.client.user)
-        if (!permissions) {
-            return payload
-                .reply('Permission Error')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete,
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-
-        const hasPermission =
-            permissions.has(PermissionFlagsBits.Connect) &&
-            permissions.has(PermissionFlagsBits.Speak)
-
-        if (!hasPermission) {
-            return payload
-                .reply('I need the permissions to join and speak in your voice channel')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete,
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-
-        if (!this.discordClientService.getIsPlaying(payload.guildId) && musicQueue.length === 1) {
-            musicQueue.shift()
-            this.discordClientService.setMusicQueue(payload.guildId, musicQueue)
-            this.discordClientService.setIsPlaying(payload.guildId, false)
-        }
-
-        const playlistCheck =
-            content.match(/^(?!.*\?.*\bv=)https:\/\/(www\.)?youtube\.com\/.*\?.*\blist=.*$/) ||
-            content.match(/https:\/\/music\.youtube\.com\/playlist\?list=.*/)
-        const vidSongCheck =
-            content.match(/https:\/\/(www\.)?youtube\.com\/watch\?v=.*/) ||
-            content.match(/https:\/\/youtu\.be\/.*/) ||
-            content.match(/https:\/\/music\.youtube\.com\/watch\?v=.*/)
-
-        try {
-            if (playlistCheck) await this.playlistHandler(content, voiceChannel, payload)
-            else if (vidSongCheck) await this.singleVidHandler(content, voiceChannel, payload)
-            else await this.searchHandler(content, payload)
-        } catch (err) {
-            this.discordClientService.setIsPlaying(payload.guildId, false)
-            throw err
-        }
-    }
-
-    @HandleDiscordError()
-    public async emptyQueue(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload)) {
-            return payload
-                .reply('You have to be in a voice channel to clear queue music')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete,
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
-
-        const queue = this.discordClientService.getMusicQueue(payload.guildId)
-        if (queue.length === 0) {
-            return payload
-                .reply('Queue is empty')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-
-        this.discordClientService.setMusicQueue(payload.guildId, [queue[0]])
-
-        return payload
-            .reply('queue cleared')
-            .then(msg =>
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                ),
-            )
-    }
-
-    @HandleDiscordError()
-    public async help(payload: Message | ChatInputCommandInteraction) {
-        const discordConfig = this.configService.getDiscordConfig()
-        const embed: EmbedBuilder = new EmbedBuilder()
-            .setColor('#ffffff')
-            .setTitle('Commands')
-            .addFields([
-                {name: 'prefix', value: discordConfig.COMMAND_PREFIX},
-                {name: 'p', value: `음악 재생 => ${discordConfig.COMMAND_PREFIX}p [uri]`},
-                {name: 's', value: `음악 스킵 => ${discordConfig.COMMAND_PREFIX}s`},
-                {name: 'q', value: `음악 큐 조회 => ${discordConfig.COMMAND_PREFIX}q`},
-                {name: 'eq', value: `음악 큐 제거 => ${discordConfig.COMMAND_PREFIX}eq`},
-                {name: 'l', value: `내보내기 => ${discordConfig.COMMAND_PREFIX}l`},
-            ])
-
-        return payload
-            .reply({embeds: [embed]})
-            .then(msg => setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT))
-    }
-
-    @HandleDiscordError()
-    public async leave(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload)) {
-            return payload
-                .reply('You have to be in a voice channel to make bot leave')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-        }
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
-
-        this.discordClientService.setMusicQueue(payload.guildId, [])
-        this.discordClientService.setIsPlaying(payload.guildId, false)
-        this.discordClientService.deleteCurrentInfoMsg(payload.guildId)
-
-        this.discordClientService.getConnection(payload.guildId)?.destroy()
-        this.discordClientService.deleteConnection(payload.guildId)
-        return payload
-            .reply('bye bye ,,,')
-            .then(msg =>
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                ),
-            )
-    }
-
-    @HandleDiscordError()
-    public async queue(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload))
-            return payload.reply('You have to be in a voice channel to see queue')
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
-
-        const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
-        if (!musicQueue.length || musicQueue.length === 1)
-            return payload
-                .reply('Queue is empty')
-                .then(msg =>
-                    setTimeout(
-                        () => msg.delete(),
-                        this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                    ),
-                )
-
-        const embed: EmbedBuilder = new EmbedBuilder()
-            .setColor('#ffffff')
-            .setTitle('Queue')
-            .setThumbnail(musicQueue[1].thumbnail)
-        const fields: Array<APIEmbedField> = []
-
-        musicQueue.forEach(
-            (item, idx) =>
-                idx !== 0 && idx < 26 && fields.push({name: `${idx}`, value: `${item.title}`}),
-        )
-        embed.addFields(fields)
+  @HandleDiscordError()
+  private async parsePlayCommand(
+    payload: Message | ChatInputCommandInteraction,
+  ): Promise<ParsedPlayCommand | null> {
+    if (payload instanceof ChatInputCommandInteraction) {
+      const content = payload.options.getString('input') ?? '';
+      if (!content.length) {
         await payload
-            .reply({embeds: [embed]})
-            .then(msg =>
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                ),
-            )
-    }
-
-    @HandleDiscordError()
-    public async skip(payload: Message | ChatInputCommandInteraction) {
-        if (!this.getVoiceChannelFromPayload(payload)) {
-            const reply = await payload.reply('You have to be in a voice channel to see queue')
+          .reply(`parameter count doesn't match`)
+          .then((msg) =>
             setTimeout(
-                () => reply.delete(),
-                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-            )
-            return
-        }
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
+              () => msg.delete(),
+              this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+            ),
+          );
 
-        this.logger.verbose('Skipping song...')
-        const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
-        this.discordClientService.deleteCurrentInfoMsg(payload.guildId)
-        if (musicQueue.length <= 1) {
-            const reply = await payload.reply('Nothing to play')
-            setTimeout(
-                () => reply.delete(),
-                this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-            )
+        return null;
+      }
 
-            this.discordClientService.setMusicQueue(payload.guildId, [])
-            this.discordClientService.getPlayer(payload.guildId).stop()
-            return
-        }
+      const member = payload.guild?.members.cache.get(
+        payload.member?.user.id || '',
+      );
+      if (!member) return null;
 
-        musicQueue.shift()
-        this.discordClientService.setMusicQueue(payload.guildId, musicQueue)
-        this.discordClientService.setIsPlaying(payload.guildId, false)
-        await this.discordClientService.playSong(payload)
+      const voiceChannel = member.voice.channel;
+      if (!voiceChannel) return null;
 
-        return payload
-            .reply('Skipping ...')
-            .then(msg =>
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                ),
-            )
+      return new ParsedPlayCommand(content, voiceChannel);
     }
 
-    @HandleDiscordError()
-    public async shuffle(payload: Message | ChatInputCommandInteraction) {
-        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
+    const args: string[] = payload.content
+      .slice(this.configService.discordConfig.COMMAND_PREFIX.length)
+      .trim()
+      .split(/ +/g);
+    if (args.length < 2) {
+      await payload
+        .reply(`parameter count doesn't match`)
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
 
-        this.discordClientService.shuffleMusicQueue(payload.guildId)
-
-        return payload
-            .reply('Queue shuffled')
-            .then(msg =>
-                setTimeout(
-                    () => msg.delete(),
-                    this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
-                ),
-            )
+      return null;
     }
+
+    args.shift();
+    const content = args.join(' ');
+
+    if (!payload.member || !payload.member.voice.channel) return null;
+    const voiceChannel = payload.member.voice.channel;
+
+    return new ParsedPlayCommand(content, voiceChannel);
+  }
+
+  @HandleDiscordError()
+  public async play(payload: Message | ChatInputCommandInteraction) {
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    const musicQueue = this.discordClientService.getMusicQueue(payload.guildId);
+
+    const parsedCommand = await this.parsePlayCommand(payload);
+    if (!parsedCommand) {
+      return payload
+        .reply('You need to be in a voice channel to play music')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete,
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+
+    const { content, voiceChannel } = parsedCommand;
+    this.logger.verbose({
+      ctx: 'play',
+      info: voiceChannel,
+    });
+
+    const permissions = voiceChannel.permissionsFor(payload.client.user);
+    if (!permissions) {
+      return payload
+        .reply('Permission Error')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete,
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+
+    const hasPermission =
+      permissions.has(PermissionFlagsBits.Connect) &&
+      permissions.has(PermissionFlagsBits.Speak);
+
+    if (!hasPermission) {
+      return payload
+        .reply('I need the permissions to join and speak in your voice channel')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete,
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+
+    if (
+      !this.discordClientService.getIsPlaying(payload.guildId) &&
+      musicQueue.length === 1
+    ) {
+      musicQueue.shift();
+      this.discordClientService.setMusicQueue(payload.guildId, musicQueue);
+      this.discordClientService.setIsPlaying(payload.guildId, false);
+    }
+
+    const playlistCheck =
+      content.match(
+        /^(?!.*\?.*\bv=)https:\/\/(www\.)?youtube\.com\/.*\?.*\blist=.*$/,
+      ) || content.match(/https:\/\/music\.youtube\.com\/playlist\?list=.*/);
+    const vidSongCheck =
+      content.match(/https:\/\/(www\.)?youtube\.com\/watch\?v=.*/) ||
+      content.match(/https:\/\/youtu\.be\/.*/) ||
+      content.match(/https:\/\/music\.youtube\.com\/watch\?v=.*/);
+
+    try {
+      if (playlistCheck)
+        await this.playlistHandler(content, voiceChannel, payload);
+      else if (vidSongCheck)
+        await this.singleVidHandler(content, voiceChannel, payload);
+      else await this.searchHandler(content, payload);
+    } catch (err) {
+      this.discordClientService.setIsPlaying(payload.guildId, false);
+      throw err;
+    }
+  }
+
+  @HandleDiscordError()
+  public async emptyQueue(payload: Message | ChatInputCommandInteraction) {
+    if (!this.getVoiceChannelFromPayload(payload)) {
+      return payload
+        .reply('You have to be in a voice channel to clear queue music')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete,
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    const queue = this.discordClientService.getMusicQueue(payload.guildId);
+    if (queue.length === 0) {
+      return payload
+        .reply('Queue is empty')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+
+    this.discordClientService.setMusicQueue(payload.guildId, [queue[0]]);
+
+    return payload
+      .reply('queue cleared')
+      .then((msg) =>
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        ),
+      );
+  }
+
+  @HandleDiscordError()
+  public async help(payload: Message | ChatInputCommandInteraction) {
+    const discordConfig = this.configService.discordConfig;
+    const embed: EmbedBuilder = new EmbedBuilder()
+      .setColor('#ffffff')
+      .setTitle('Commands')
+      .addFields([
+        { name: 'prefix', value: discordConfig.COMMAND_PREFIX },
+        {
+          name: 'p',
+          value: `음악 재생 => ${discordConfig.COMMAND_PREFIX}p [uri]`,
+        },
+        { name: 's', value: `음악 스킵 => ${discordConfig.COMMAND_PREFIX}s` },
+        { name: 'q', value: `음악 큐 조회 => ${discordConfig.COMMAND_PREFIX}q` },
+        {
+          name: 'eq',
+          value: `음악 큐 제거 => ${discordConfig.COMMAND_PREFIX}eq`,
+        },
+        { name: 'l', value: `내보내기 => ${discordConfig.COMMAND_PREFIX}l` },
+      ]);
+
+    return payload
+      .reply({ embeds: [embed] })
+      .then((msg) =>
+        setTimeout(() => msg.delete(), discordConfig.MESSAGE_DELETE_TIMEOUT),
+      );
+  }
+
+  @HandleDiscordError()
+  public async leave(payload: Message | ChatInputCommandInteraction) {
+    if (!this.getVoiceChannelFromPayload(payload)) {
+      return payload
+        .reply('You have to be in a voice channel to make bot leave')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+    }
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    this.discordClientService.setMusicQueue(payload.guildId, []);
+    this.discordClientService.setIsPlaying(payload.guildId, false);
+    this.discordClientService.deleteCurrentInfoMsg(payload.guildId);
+
+    this.discordClientService.getConnection(payload.guildId)?.destroy();
+    this.discordClientService.deleteConnection(payload.guildId);
+    return payload
+      .reply('bye bye ,,,')
+      .then((msg) =>
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        ),
+      );
+  }
+
+  @HandleDiscordError()
+  public async queue(payload: Message | ChatInputCommandInteraction) {
+    if (!this.getVoiceChannelFromPayload(payload))
+      return payload.reply('You have to be in a voice channel to see queue');
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    const musicQueue = this.discordClientService.getMusicQueue(payload.guildId);
+    if (!musicQueue.length || musicQueue.length === 1)
+      return payload
+        .reply('Queue is empty')
+        .then((msg) =>
+          setTimeout(
+            () => msg.delete(),
+            this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+          ),
+        );
+
+    const embed: EmbedBuilder = new EmbedBuilder()
+      .setColor('#ffffff')
+      .setTitle('Queue')
+      .setThumbnail(musicQueue[1].thumbnail);
+    const fields: Array<APIEmbedField> = [];
+
+    musicQueue.forEach(
+      (item, idx) =>
+        idx !== 0 &&
+        idx < 26 &&
+        fields.push({ name: `${idx}`, value: `${item.title}` }),
+    );
+    embed.addFields(fields);
+    await payload
+      .reply({ embeds: [embed] })
+      .then((msg) =>
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        ),
+      );
+  }
+
+  @HandleDiscordError()
+  public async skip(payload: Message | ChatInputCommandInteraction) {
+    if (!this.getVoiceChannelFromPayload(payload)) {
+      const reply = await payload.reply(
+        'You have to be in a voice channel to see queue',
+      );
+      setTimeout(
+        () => reply.delete(),
+        this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+      );
+      return;
+    }
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    this.logger.verbose({ctx: this.skip.name,info: 'Skipping song...',});
+    const musicQueue = this.discordClientService.getMusicQueue(payload.guildId);
+    this.discordClientService.deleteCurrentInfoMsg(payload.guildId);
+    if (musicQueue.length <= 1) {
+      const reply = await payload.reply('Nothing to play');
+      setTimeout(
+        () => reply.delete(),
+        this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+      );
+
+      this.discordClientService.setMusicQueue(payload.guildId, []);
+      this.discordClientService.getPlayer(payload.guildId).stop();
+      return;
+    }
+
+    musicQueue.shift();
+    this.discordClientService.setMusicQueue(payload.guildId, musicQueue);
+    this.discordClientService.setIsPlaying(payload.guildId, false);
+    await this.discordClientService.playSong(payload);
+
+    return payload
+      .reply('Skipping ...')
+      .then((msg) =>
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        ),
+      );
+  }
+
+  @HandleDiscordError()
+  public async shuffle(payload: Message | ChatInputCommandInteraction) {
+    if (!payload.guildId)
+      throw new DiscordException('guild is not specified', 'command');
+
+    this.discordClientService.shuffleMusicQueue(payload.guildId);
+
+    return payload
+      .reply('Queue shuffled')
+      .then((msg) =>
+        setTimeout(
+          () => msg.delete(),
+          this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+        ),
+      );
+  }
 }
