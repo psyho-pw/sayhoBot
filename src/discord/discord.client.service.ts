@@ -28,6 +28,7 @@ import { HttpService } from '@nestjs/axios'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { Logger } from 'winston'
 import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core'
+import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { DiscordNotificationService } from './discord.notification.service'
 import { AppConfigService } from '../config/config.service'
 import { SongService } from '../song/song.service'
@@ -302,8 +303,20 @@ export class DiscordClientService {
         musicQueue[0] = nextSong
         this.musicQueue.set(guildId, musicQueue)
 
+        const proxyUrl = this.configService.getAppConfig().PROXY
+        const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
+
+        const createProxyFetcher = (agent: ProxyAgent) => {
+            return (url: URL | RequestInfo, options?: RequestInit): Promise<Response> =>
+                undiciFetch(url.toString(), {
+                    ...((options ?? {}) as Record<string, unknown>),
+                    dispatcher: agent,
+                }) as Promise<Response>
+        }
+
         const ytdl = new YtdlCore({
             clients: ['ios', 'android', 'tv'],
+            fetcher: proxyAgent ? createProxyFetcher(proxyAgent) : undefined,
         })
         const webStream = await ytdl.download(musicQueue[0].url, {
             filter: 'audioandvideo',

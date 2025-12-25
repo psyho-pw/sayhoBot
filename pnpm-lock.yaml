@@ -95,6 +95,9 @@ importers:
       typeorm-transactional:
         specifier: ^0.5.0
         version: 0.5.0(reflect-metadata@0.2.2)(typeorm@0.3.28(mysql2@3.16.0)(ts-node@10.9.2(@types/node@22.8.7)(typescript@5.8.3)))
+      undici:
+        specifier: ^7.16.0
+        version: 7.16.0
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -3797,6 +3800,10 @@ packages:
   undici@6.21.3:
     resolution: {integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw==}
     engines: {node: '>=18.17'}
+
+  undici@7.16.0:
+    resolution: {integrity: sha512-QEg3HPMll0o3t2ourKwOeUAZ159Kn9mx5pnzHRQO8+Wixmh88YdZRiIwat0iNzNNXn0yoEtXJqFpyW7eM8BV7g==}
+    engines: {node: '>=20.18.1'}
 
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
@@ -8029,6 +8036,8 @@ snapshots:
   undici-types@6.19.8: {}
 
   undici@6.21.3: {}
+
+  undici@7.16.0: {}
 
   universalify@2.0.1: {}
 

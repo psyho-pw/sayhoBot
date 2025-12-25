@@ -1,1 +1,4 @@
-onlyBuiltDependencies: yt-dlp-exec
+onlyBuiltDependencies:
+  - '@discordjs/opus'
+  - sodium-native
+  - '@snazzah/davey'
