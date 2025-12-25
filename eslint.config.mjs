@@ -8,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import prettierPlugin from 'eslint-plugin-prettier';
 
-export default tseslint.config(
+export default [
     {
         ignores: ['node_modules', 'dist', '.eslintrc.js'],
     },
@@ -109,4 +109,4 @@ export default tseslint.config(
             ],
         },
     },
-);
+];
