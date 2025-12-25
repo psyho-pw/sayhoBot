@@ -1,39 +1,42 @@
-import {AppConfigService} from 'src/config/config.service'
-import {NestFactory, Reflector} from '@nestjs/core'
-import {WINSTON_MODULE_NEST_PROVIDER} from 'nest-winston'
-import {AppModule} from './app.module'
-import {ClassSerializerInterceptor, Logger, ValidationPipe, VersioningType} from '@nestjs/common'
-import {NestExpressApplication} from '@nestjs/platform-express'
-import helmet from 'helmet'
-import {initializeTransactionalContext} from 'typeorm-transactional'
-import * as process from 'node:process'
+import { VersioningType } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
+import { initializeTransactionalContext } from 'typeorm-transactional';
+import { AppModule } from './app.module';
+import { ConfigServiceKey } from './common/modules/config/config.service';
+import { IConfigService } from './common/modules/config/config.type';
+import { LoggerServiceKey, ILoggerService } from './common/modules/logger/logger.interface';
 
 async function bootstrap() {
-    initializeTransactionalContext()
-    const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  initializeTransactionalContext();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
-    const configService = app.get(AppConfigService)
-    const appConfig = configService.getAppConfig()
-    const serverConfig = configService.getServerConfig()
+  const configService = app.get<IConfigService>(ConfigServiceKey);
+  const logger = await app.resolve<ILoggerService>(LoggerServiceKey);
+  logger.setContext('bootstrap');
 
-    Logger.debug('env', {appConfig, serverConfig})
+  const appConfig = configService.appConfig;
+  const serverConfig = configService.serverConfig;
 
-    app.set('trust proxy', true)
-    app.use(helmet())
-    app.setGlobalPrefix('api')
-    app.enableVersioning({type: VersioningType.URI})
-    app.enableCors(serverConfig.CORS)
-    app.useGlobalPipes(
-        new ValidationPipe({
-            transform: true,
-            transformOptions: {enableImplicitConversion: true},
-        }),
-    )
-    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)))
-    app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
-    await app.listen(appConfig.PORT)
+  logger.debug({
+    ctx: bootstrap.name,
+    info: { appConfig, serverConfig },
+  });
+
+  app.set('trust proxy', true);
+  app.use(helmet());
+  app.setGlobalPrefix('api');
+  app.enableVersioning({ type: VersioningType.URI });
+  app.enableCors(serverConfig.CORS);
+  await app.listen(appConfig.PORT, () => {
+    logger.verbose({
+      ctx: bootstrap.name,
+      info: `[${appConfig.ENV}] Listening on port ${appConfig.PORT}`,
+    });
+  });
 }
 
-bootstrap().then(() =>
-    Logger.verbose(`[${process.env.NODE_ENV}] Listening on port ${process.env.PORT}`),
-)
+bootstrap();
