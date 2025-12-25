@@ -1,18 +1,23 @@
 // import type {User} from 'src/user/entities/user.entity'
-import {CreateDateColumn, DeleteDateColumn, PrimaryGeneratedColumn, UpdateDateColumn} from 'typeorm'
+import {
+    CreateDateColumn,
+    DeleteDateColumn,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 
 export abstract class AbstractEntity {
     @PrimaryGeneratedColumn()
-    id: number
+    id: number;
 
     @CreateDateColumn()
-    createdAt: Date
+    createdAt: Date;
 
     @UpdateDateColumn()
-    updatedAt: Date
+    updatedAt: Date;
 
     @DeleteDateColumn()
-    deletedAt: Date | null
+    deletedAt: Date | null;
 }
 
 // export abstract class AbstractActorEntity extends AbstractEntity {

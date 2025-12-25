@@ -1,1 +1,1 @@
-export * from './discord-error.aspect'
+export * from './discord-error.aspect';

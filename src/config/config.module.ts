@@ -1,9 +1,9 @@
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ConfigServiceKey, TypedConfigService } from './config.service';
-import { configs } from './config';
-import { LoggerModule } from '../common/logger/logger.module';
-import { ClsModule } from 'nestjs-cls';
+import {Global, Module} from '@nestjs/common';
+import {ConfigModule} from '@nestjs/config';
+import {ClsModule} from 'nestjs-cls';
+import {configs} from './config';
+import {ConfigServiceKey, TypedConfigService} from './config.service';
+import {LoggerModule} from '../common/logger/logger.module';
 
 @Global()
 @Module({
@@ -20,8 +20,8 @@ import { ClsModule } from 'nestjs-cls';
         {
             provide: ConfigServiceKey,
             useClass: TypedConfigService,
-    },
-  ],
-  exports: [ConfigServiceKey],
+        },
+    ],
+    exports: [ConfigServiceKey],
 })
 export class AppConfigModule {}

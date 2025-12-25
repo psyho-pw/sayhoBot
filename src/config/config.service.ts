@@ -1,3 +1,5 @@
+import {Injectable} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
 import {
     AppConfig,
     AuthConfig,
@@ -9,8 +11,6 @@ import {
     ServerConfig,
     YoutubeConfig,
 } from './config.type';
-import {Injectable} from '@nestjs/common';
-import {ConfigService} from '@nestjs/config';
 
 export const ConfigServiceKey = Symbol('ConfigService');
 

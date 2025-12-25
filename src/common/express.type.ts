@@ -1,10 +1,10 @@
-import { Request as ExpressRequest } from 'express';
+import {Request as ExpressRequest} from 'express';
 
 declare module 'express' {
-  interface Request {
-    startTime: number;
-    requestId: string;
-  }
+    interface Request {
+        startTime: number;
+        requestId: string;
+    }
 }
 
 export type Request = ExpressRequest;

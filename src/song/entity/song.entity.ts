@@ -1,15 +1,15 @@
-import {Column, Entity, Index} from 'typeorm'
-import {AbstractEntity} from '../../common/abstract.entity'
+import {Column, Entity, Index} from 'typeorm';
+import {AbstractEntity} from '../../common/abstract.entity';
 
 @Entity()
 export class Song extends AbstractEntity {
     @Column()
-    url: string
+    url: string;
 
     @Index()
     @Column()
-    title: string
+    title: string;
 
     @Column({default: 1})
-    count: number
+    count: number;
 }

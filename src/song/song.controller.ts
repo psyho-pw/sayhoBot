@@ -1,6 +1,6 @@
-import {Controller, Get, Query} from '@nestjs/common'
-import {SongService} from './song.service'
-import {GetSongsDto} from './dto/get-songs.dto'
+import {Controller, Get, Query} from '@nestjs/common';
+import {GetSongsDto} from './dto/get-songs.dto';
+import {SongService} from './song.service';
 
 @Controller('songs')
 export class SongController {
@@ -8,6 +8,6 @@ export class SongController {
 
     @Get('/')
     findAll(@Query() getSongsDto: GetSongsDto) {
-        return this.songsService.findAll(getSongsDto)
+        return this.songsService.findAll(getSongsDto);
     }
 }

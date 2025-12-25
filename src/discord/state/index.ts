@@ -1,2 +1,2 @@
-export * from './channel-state'
-export * from './channel-state.manager'
+export * from './channel-state';
+export * from './channel-state.manager';

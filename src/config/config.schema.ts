@@ -1,82 +1,82 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min, validateSync } from 'class-validator'
-import { plainToInstance, Type } from 'class-transformer'
+import {plainToInstance, Type} from 'class-transformer';
+import {IsNotEmpty, IsNumber, IsOptional, IsString, Min, validateSync} from 'class-validator';
 
 export class DiscordConfigSchema {
     @IsString()
-    @IsNotEmpty({ message: 'DISCORD_TOKEN is required' })
-    TOKEN: string
+    @IsNotEmpty({message: 'DISCORD_TOKEN is required'})
+    TOKEN: string;
 
     @IsString()
-    @IsNotEmpty({ message: 'DISCORD_CLIENT_ID is required' })
-    CLIENT_ID: string
-
-    @IsString()
-    @IsOptional()
-    GUILD_ID?: string
+    @IsNotEmpty({message: 'DISCORD_CLIENT_ID is required'})
+    CLIENT_ID: string;
 
     @IsString()
     @IsOptional()
-    COMMAND_PREFIX?: string
+    GUILD_ID?: string;
 
     @IsString()
     @IsOptional()
-    WEBHOOK_URL?: string
+    COMMAND_PREFIX?: string;
+
+    @IsString()
+    @IsOptional()
+    WEBHOOK_URL?: string;
 
     @IsNumber()
     @Min(1000)
     @IsOptional()
-    MESSAGE_DELETE_TIMEOUT?: number
+    MESSAGE_DELETE_TIMEOUT?: number;
 }
 
 export class YoutubeConfigSchema {
     @IsString()
-    @IsNotEmpty({ message: 'YOUTUBE_API_KEY is required' })
-    YOUTUBE_API_KEY: string
+    @IsNotEmpty({message: 'YOUTUBE_API_KEY is required'})
+    YOUTUBE_API_KEY: string;
 
     @IsString()
     @IsOptional()
-    COOKIE?: string
+    COOKIE?: string;
 
     @IsString()
     @IsOptional()
-    IDENTITY_TOKEN?: string
+    IDENTITY_TOKEN?: string;
 }
 
 export class DBConfigSchema {
     @IsString()
-    @IsNotEmpty({ message: 'DB_HOST is required' })
-    host: string
+    @IsNotEmpty({message: 'DB_HOST is required'})
+    host: string;
 
     @Type(() => Number)
     @IsNumber()
     @IsOptional()
-    port?: number
+    port?: number;
 
     @IsString()
-    @IsNotEmpty({ message: 'DB_USERNAME is required' })
-    username: string
+    @IsNotEmpty({message: 'DB_USERNAME is required'})
+    username: string;
 
     @IsString()
-    @IsNotEmpty({ message: 'DB_PASSWORD is required' })
-    password: string
+    @IsNotEmpty({message: 'DB_PASSWORD is required'})
+    password: string;
 
     @IsString()
-    @IsNotEmpty({ message: 'DB_DATABASE is required' })
-    database: string
+    @IsNotEmpty({message: 'DB_DATABASE is required'})
+    database: string;
 }
 
 export class AppConfigSchema {
     @IsString()
     @IsNotEmpty()
-    NAME: string
+    NAME: string;
 
     @IsString()
     @IsNotEmpty()
-    VERSION: string
+    VERSION: string;
 
     @IsString()
     @IsOptional()
-    PROXY?: string
+    PROXY?: string;
 }
 
 export function validateConfig<T extends object>(
@@ -85,18 +85,18 @@ export function validateConfig<T extends object>(
 ): T {
     const validatedConfig = plainToInstance(schema, config, {
         enableImplicitConversion: true,
-    })
+    });
 
     const errors = validateSync(validatedConfig, {
         skipMissingProperties: false,
-    })
+    });
 
     if (errors.length > 0) {
         const errorMessages = errors
             .map(error => Object.values(error.constraints || {}).join(', '))
-            .join('; ')
-        throw new Error(`Configuration validation failed: ${errorMessages}`)
+            .join('; ');
+        throw new Error(`Configuration validation failed: ${errorMessages}`);
     }
 
-    return validatedConfig
+    return validatedConfig;
 }

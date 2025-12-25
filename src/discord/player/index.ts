@@ -1,2 +1,2 @@
-export * from './player.service'
-export * from './stream.service'
+export * from './player.service';
+export * from './stream.service';

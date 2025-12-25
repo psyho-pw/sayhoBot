@@ -1,12 +1,12 @@
-import { ConfigServiceKey } from './config/config.service';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { VersioningType } from '@nestjs/common';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import {VersioningType} from '@nestjs/common';
+import {NestFactory} from '@nestjs/core';
+import {NestExpressApplication} from '@nestjs/platform-express';
 import helmet from 'helmet';
-import { initializeTransactionalContext } from 'typeorm-transactional';
-import { LoggerServiceKey, ILoggerService } from './common/logger/logger.interface';
-import { IConfigService } from './config/config.type';
+import {initializeTransactionalContext} from 'typeorm-transactional';
+import {AppModule} from './app.module';
+import {LoggerServiceKey, ILoggerService} from './common/logger/logger.interface';
+import {ConfigServiceKey} from './config/config.service';
+import {IConfigService} from './config/config.type';
 
 async function bootstrap() {
     initializeTransactionalContext();

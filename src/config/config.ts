@@ -1,12 +1,12 @@
-import pkg from '../../package.json'
-import {Configs} from './config.type'
-import micromatch from 'micromatch'
-import * as process from 'process'
+import * as process from 'process';
+import micromatch from 'micromatch';
+import {Configs} from './config.type';
+import pkg from '../../package.json';
 
 export const configs = (): Configs => {
-    const currentEnv = process.env.NODE_ENV || 'local'
+    const currentEnv = process.env.NODE_ENV || 'local';
 
-    const originWhiteList: string[] = JSON.parse(process.env.ORIGIN_WHITELIST || '[]')
+    const originWhiteList: string[] = JSON.parse(process.env.ORIGIN_WHITELIST || '[]');
 
     return {
         APP: {
@@ -35,13 +35,13 @@ export const configs = (): Configs => {
             },
             CORS: {
                 origin: (origin, callback) => {
-                    const isKnownOrigin = micromatch.isMatch(origin || '', originWhiteList)
+                    const isKnownOrigin = micromatch.isMatch(origin || '', originWhiteList);
 
                     if (isKnownOrigin || !origin) {
-                        return callback(null, true)
+                        return callback(null, true);
                     }
 
-                    callback(new Error(`${origin} is not allowed by CORS`))
+                    callback(new Error(`${origin} is not allowed by CORS`));
                 },
                 exposedHeaders: ['session-expires'],
                 methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
@@ -85,5 +85,5 @@ export const configs = (): Configs => {
         FRONT: {
             FRONT_URL: process.env.FRONT_URL || '',
         },
-    }
-}
+    };
+};

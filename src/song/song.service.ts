@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Like, Repository } from 'typeorm'
-import { Song } from './entity/song.entity'
-import { Transactional } from 'typeorm-transactional'
-import { CreateSongDto } from './dto/create-song.dto'
-import { GetSongsDto } from './dto/get-songs.dto'
-import { FindOptionsWhere } from 'typeorm/find-options/FindOptionsWhere'
+import {Injectable} from '@nestjs/common';
+import {InjectRepository} from '@nestjs/typeorm';
+import {Like, Repository} from 'typeorm';
+import {FindOptionsWhere} from 'typeorm/find-options/FindOptionsWhere';
+import {Transactional} from 'typeorm-transactional';
+import {CreateSongDto} from './dto/create-song.dto';
+import {GetSongsDto} from './dto/get-songs.dto';
+import {Song} from './entity/song.entity';
 
 @Injectable()
 export class SongService {
@@ -13,25 +13,25 @@ export class SongService {
 
     @Transactional()
     public async create(createSongDto: CreateSongDto): Promise<Song> {
-        const song = new Song()
-        song.url = createSongDto.url
-        song.title = createSongDto.title
+        const song = new Song();
+        song.url = createSongDto.url;
+        song.title = createSongDto.title;
 
-        return this.songRepository.save(song)
+        return this.songRepository.save(song);
     }
 
     @Transactional()
     public async findAll(getSongsDto: GetSongsDto) {
-        const {searchText, page, limit} = getSongsDto
-        const whereOptions: FindOptionsWhere<Song> = {}
+        const {searchText, page, limit} = getSongsDto;
+        const whereOptions: FindOptionsWhere<Song> = {};
         if (searchText) {
-            whereOptions.title = Like(`%${searchText}%`)
+            whereOptions.title = Like(`%${searchText}%`);
         }
         return this.songRepository.find({
             where: whereOptions,
             order: {id: -1},
             skip: (page - 1) * limit,
             take: limit,
-        })
+        });
     }
 }

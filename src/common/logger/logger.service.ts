@@ -1,13 +1,13 @@
-import {ConfigServiceKey} from '../../config/config.service';
-import {Env} from '../../constants';
 import {Inject, Injectable, Scope} from '@nestjs/common';
 import {INQUIRER} from '@nestjs/core';
 import {WINSTON_MODULE_NEST_PROVIDER, WinstonLogger} from 'nest-winston';
 import {v7} from 'uuid';
-import {Log, LogParams, ILoggerService} from './logger.interface';
 import {IConfigService} from 'src/config/config.type';
-import {IClsService} from '../cls/cls.type';
+import {Log, LogParams, ILoggerService} from './logger.interface';
+import {ConfigServiceKey} from '../../config/config.service';
+import {Env} from '../../constants';
 import {ClsServiceKey} from '../cls/cls.module';
+import {IClsService} from '../cls/cls.type';
 
 @Injectable({scope: Scope.TRANSIENT})
 export class LoggerService implements ILoggerService {
