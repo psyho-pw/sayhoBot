@@ -1,6 +1,6 @@
-import {Injectable} from '@nestjs/common'
-import {TypeOrmModuleOptions, TypeOrmOptionsFactory} from '@nestjs/typeorm'
-import {AppConfigService} from 'src/config/config.service'
+import { Injectable } from '@nestjs/common'
+import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm'
+import { AppConfigService } from 'src/config/config.service'
 
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
@@ -11,6 +11,14 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
             ...this.configService.getDBConfig(),
             entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
             logging: false,
+            extra: {
+                connectionLimit: 10,
+                waitForConnections: true,
+                enableKeepAlive: true,
+                keepAliveInitialDelay: 10000,
+            },
+            retryAttempts: 3,
+            retryDelay: 3000,
         }
 
         return options
