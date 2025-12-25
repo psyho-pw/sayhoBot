@@ -13,7 +13,8 @@ import { IStreamProvider } from '../../domain/ports/stream-provider.port';
 export class StreamProviderAdapter implements IStreamProvider {
   constructor(
     @Inject(ConfigServiceKey) private readonly configService: IConfigService,
-    @Inject(PoTokenServicePort) private readonly poTokenService: IPoTokenService,
+    @Inject(PoTokenServicePort)
+    private readonly poTokenService: IPoTokenService,
   ) {}
 
   private createProxyFetcher(agent: ProxyAgent) {
@@ -38,6 +39,7 @@ export class StreamProviderAdapter implements IStreamProvider {
       poToken,
       visitorData,
       disablePoTokenAutoGeneration: true,
+      highWaterMark: 1024 * 1024 * 32,
     });
   }
 
