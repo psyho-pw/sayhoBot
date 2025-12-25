@@ -20,32 +20,32 @@ import { DiscordModule } from './discord/discord.module';
 import { SongModule } from './song/song.module';
 
 @Module({
-    imports: [
-        ClsModule,
-        AppConfigModule,
-        TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
-        WinstonModule.forRootAsync({useClass: WinstonConfigService}),
-        AopModule,
-        DiscordModule,
-        SongModule,
-        LoggerModule,
-    ],
-    controllers: [AppController],
-    providers: [
-        {provide: APP_GUARD, useClass: ClsGuard},
-        {provide: APP_GUARD, useClass: RequestIdGuard},
-        {provide: APP_PIPE, useClass: GlobalValidationPipe},
-        {provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor},
-        {provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor},
-        {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor},
-    ],
+  imports: [
+    ClsModule,
+    AppConfigModule,
+    TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
+    WinstonModule.forRootAsync({useClass: WinstonConfigService}),
+    AopModule,
+    DiscordModule,
+    SongModule,
+    LoggerModule,
+  ],
+  controllers: [AppController],
+  providers: [
+    {provide: APP_GUARD, useClass: ClsGuard},
+    {provide: APP_GUARD, useClass: RequestIdGuard},
+    {provide: APP_PIPE, useClass: GlobalValidationPipe},
+    {provide: APP_INTERCEPTOR, useClass: RequestLogInterceptor},
+    {provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor},
+    {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor},
+  ],
 })
 export class AppModule implements NestModule {
-    constructor(private dataSource: DataSource) {
-        addTransactionalDataSource(this.dataSource);
-    }
+  constructor(private dataSource: DataSource) {
+    addTransactionalDataSource(this.dataSource);
+  }
 
-    configure(consumer: MiddlewareConsumer): void {
-        // consumer.apply(LoggerMiddleware).forRoutes('/');
-    }
+  configure(_consumer: MiddlewareConsumer): void {
+    // _consumer.apply(LoggerMiddleware).forRoutes('/');
+  }
 }
