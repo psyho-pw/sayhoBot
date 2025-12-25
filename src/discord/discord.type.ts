@@ -50,7 +50,7 @@ export interface PlayList extends SimpleYoutubeAPIBase {
 }
 
 export interface SimpleYoutubeAPI {
-    searchVideos(query?: string, limit?: number, options?: Record<string, any>): Promise<Video[]>
+    searchVideos(query?: string, limit?: number, options?: Record<string, any>): Promise<Array<Channel | Video>>
     getPlaylist(url: string, options?: Record<string, any>): Promise<PlayList>
     getVideo(url: string, options?: Record<string, any>): Promise<Video>
 }
