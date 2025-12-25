@@ -6,6 +6,8 @@ import {DiscordClientService} from './discord.client.service'
 import {DiscordCommandService} from './discord.command.service'
 import {DiscordEventService} from './discord.event.service'
 import {DiscordNotificationService} from './discord.notification.service'
+import {DiscordErrorAspect} from '../common/aop'
+import {ChannelStateManager} from './state'
 
 @Module({
     imports: [HttpModule, SongModule],
@@ -15,6 +17,8 @@ import {DiscordNotificationService} from './discord.notification.service'
         DiscordCommandService,
         DiscordEventService,
         DiscordNotificationService,
+        DiscordErrorAspect,
+        ChannelStateManager,
     ],
     exports: [DiscordService, DiscordNotificationService],
 })

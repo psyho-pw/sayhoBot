@@ -4,6 +4,7 @@ import {TypeOrmModule} from '@nestjs/typeorm'
 import {TypeormConfigService} from './common/configServices/typeorm.config.service'
 import {WinstonConfigService} from './common/configServices/winston.config.service'
 import {WinstonModule} from 'nest-winston'
+import {AopModule} from '@toss/nestjs-aop'
 import {DiscordModule} from './discord/discord.module'
 import {addTransactionalDataSource} from 'typeorm-transactional'
 import {DataSource} from 'typeorm'
@@ -18,6 +19,7 @@ import {SongModule} from './song/song.module'
         AppConfigModule,
         TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
         WinstonModule.forRootAsync({useClass: WinstonConfigService}),
+        AopModule,
         DiscordModule,
         SongModule,
     ],

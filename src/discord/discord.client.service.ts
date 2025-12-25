@@ -24,7 +24,6 @@ import {
     StreamType,
     VoiceConnection,
 } from '@discordjs/voice'
-import { HttpService } from '@nestjs/axios'
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston'
 import { Logger } from 'winston'
 import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core'
@@ -32,38 +31,25 @@ import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { DiscordNotificationService } from './discord.notification.service'
 import { AppConfigService } from '../config/config.service'
 import { SongService } from '../song/song.service'
-import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
-import { DiscordClientException } from '../common/exceptions/discord/discord.client.exception'
+import { HandleDiscordError } from '../common/aop'
+import { DiscordException } from '../common/exceptions/discord.exception'
 import { Song } from './discord.model'
 import { Video } from './discord.type'
+import { ChannelStateManager } from './state'
 
 @Injectable()
 export class DiscordClientService {
     discordBotClient: Client
     public commands: Collection<string, any> = new Collection()
-    private musicQueue = new Map<string, Song[]>()
-    private isPlaying = new Map<string, boolean>()
-    private currentInfoMsg = new Map<string, Message>()
-    private volume = new Map<string, number>()
-    private player = new Map<string, AudioPlayer>()
-    private connection = new Map<string, VoiceConnection>()
-    private deleteQueue: Map<string, Map<string, Message | InteractionResponse>> = new Map()
     private rest: REST
 
-    private readonly configService: AppConfigService
-
-    private readonly songService: SongService
-
     constructor(
-        configService: AppConfigService,
-        private readonly httpService: HttpService,
-        songService: SongService,
+        private readonly configService: AppConfigService,
+        private readonly songService: SongService,
         private readonly discordNotificationService: DiscordNotificationService,
+        private readonly stateManager: ChannelStateManager,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-    ) {
-        this.songService = songService
-        this.configService = configService
-    }
+    ) {}
 
     @HandleDiscordError()
     public async init() {
@@ -83,10 +69,10 @@ export class DiscordClientService {
                 this.configService.getDiscordConfig().TOKEN,
             )
             await this.discordBotClient.login(this.configService.getDiscordConfig().TOKEN)
-            this.logger.verbose('✅  DiscordBotClient instance initialized')
+            this.logger.verbose('DiscordBotClient instance initialized')
         } catch (err) {
             console.error(err)
-            throw new DiscordClientException('login failed')
+            throw new DiscordException('login failed', 'client')
         }
     }
 
@@ -147,23 +133,23 @@ export class DiscordClientService {
         try {
             await handler()
         } catch (err) {
-            const player = this.player.get(guildId)
+            const player = this.stateManager.getPlayer(guildId)
             if (!player) return this.logger.error('player not found')
             player.emit('error', err)
         }
     }
 
-    @HandleDiscordError(true)
+    @HandleDiscordError({ bubble: true })
     private async playerOnPlayHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId || ''
-        if (this.isPlaying.get(guildId)) return
+        if (this.stateManager.getIsPlaying(guildId)) return
 
         const channel = message.channel as TextChannel
-        const musicQueue = this.musicQueue.get(guildId)
-        if (!musicQueue) throw new DiscordClientException('Queue does not exist')
+        const musicQueue = this.stateManager.getMusicQueue(guildId)
+        if (!musicQueue.length) throw new DiscordException('Queue does not exist', 'client')
 
         const currentItem = musicQueue[0]
-        if (!currentItem) throw new DiscordClientException('Queue item is corrupted')
+        if (!currentItem) throw new DiscordException('Queue item is corrupted', 'client')
 
         const embed = new EmbedBuilder()
             .setColor('#0099ff')
@@ -173,39 +159,40 @@ export class DiscordClientService {
             .setDescription(`${currentItem.title} (${currentItem.duration})`)
 
         const msg = await channel.send({embeds: [embed]})
-        this.currentInfoMsg.set(guildId, msg)
+        this.stateManager.setCurrentInfoMsg(guildId, msg)
         this.logger.info(`Currently playing ${currentItem.title}`)
 
-        this.isPlaying.set(guildId, true)
+        this.stateManager.setIsPlaying(guildId, true)
     }
 
-    @HandleDiscordError(true)
+    @HandleDiscordError({ bubble: true })
     private async playerIdleHandler(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException('guildId not specified')
+        if (!guildId) throw new DiscordException('guildId not specified', 'client')
 
         const channel = message.channel as TextChannel
 
-        this.deleteCurrentInfoMsg(guildId)
-        const musicQueue = this.musicQueue.get(guildId)
-        if (!musicQueue) throw new DiscordClientException('Queue does not exist')
+        this.stateManager.deleteCurrentInfoMsg(guildId)
+        const musicQueue = this.stateManager.getMusicQueue(guildId)
+        if (!musicQueue.length) throw new DiscordException('Queue does not exist', 'client')
 
-        this.isPlaying.set(guildId, false)
+        this.stateManager.setIsPlaying(guildId, false)
 
         if (musicQueue.length > 1) {
             this.logger.debug('queue length is not zero')
             musicQueue.shift()
-            this.musicQueue.set(guildId, musicQueue)
+            this.stateManager.setMusicQueue(guildId, musicQueue)
             await this.playSong(message)
             return
         }
 
         this.logger.debug('queue empty')
         setTimeout(() => {
-            if ((this.musicQueue.get(guildId) || []).length <= 1 && !this.isPlaying.get(guildId)) {
-                this.musicQueue.set(guildId, [])
-                this.isPlaying.set(guildId, false)
-                this.volume.set(guildId, 1)
+            const currentQueue = this.stateManager.getMusicQueue(guildId)
+            if (currentQueue.length <= 1 && !this.stateManager.getIsPlaying(guildId)) {
+                this.stateManager.setMusicQueue(guildId, [])
+                this.stateManager.setIsPlaying(guildId, false)
+                this.stateManager.setVolume(guildId, 1)
 
                 channel
                     .send(`Disconnected from channel due to inactivity`)
@@ -215,8 +202,8 @@ export class DiscordClientService {
                             this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
                         ),
                     )
-                this.connection.get(guildId)?.destroy()
-                this.connection.delete(guildId)
+                this.stateManager.getConnection(guildId)?.destroy()
+                this.stateManager.deleteConnection(guildId)
             }
         }, 180000)
     }
@@ -224,7 +211,7 @@ export class DiscordClientService {
     @HandleDiscordError()
     private async createPlayer(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException('guildId not specified')
+        if (!guildId) throw new DiscordException('guildId not specified', 'client')
 
         const player: AudioPlayer = createAudioPlayer()
         const channel = message.channel as TextChannel
@@ -243,11 +230,11 @@ export class DiscordClientService {
                     stack: err.stack,
                 })
 
-                const musicQueue = this.musicQueue.get(guildId)
-                this.isPlaying.set(guildId, false)
-                this.deleteCurrentInfoMsg(guildId)
+                const musicQueue = this.stateManager.getMusicQueue(guildId)
+                this.stateManager.setIsPlaying(guildId, false)
+                this.stateManager.deleteCurrentInfoMsg(guildId)
 
-                if (!musicQueue) {
+                if (!musicQueue.length) {
                     return channel
                         .send('Queue does not exist')
                         .then(msg =>
@@ -278,7 +265,7 @@ export class DiscordClientService {
                         ),
                     )
 
-                const exception = new DiscordClientException(err.message, 'player')
+                const exception = new DiscordException(err.message, 'client', 'player')
                 exception.stack = err.stack
                 await this.discordNotificationService.sendErrorReport(exception)
             })
@@ -289,19 +276,18 @@ export class DiscordClientService {
     @HandleDiscordError()
     public async playSong(message: Message | ChatInputCommandInteraction) {
         const guildId = message.guildId
-        if (!guildId) throw new DiscordClientException('guildId not specified')
+        if (!guildId) throw new DiscordException('guildId not specified', 'client')
 
         const channel = message.channel as TextChannel
-        const musicQueue = this.musicQueue.get(guildId)
-        if (!musicQueue) return channel.send('No Queue found')
-        if (!musicQueue.length) return channel.send('No songs in queue')
+        const musicQueue = this.stateManager.getMusicQueue(guildId)
+        if (!musicQueue.length) return channel.send('No Queue found')
 
         const video = await musicQueue[0].video.fetch()
         const nextSong: Song | null = this.formatVideo(video, musicQueue[0].voiceChannel)
         if (!nextSong) return channel.send('Cannot fetch next song')
 
         musicQueue[0] = nextSong
-        this.musicQueue.set(guildId, musicQueue)
+        this.stateManager.setMusicQueue(guildId, musicQueue)
 
         const proxyUrl = this.configService.getAppConfig().PROXY
         const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
@@ -331,7 +317,7 @@ export class DiscordClientService {
         const resource: AudioResource = createAudioResource(stream, {
             inputType: StreamType.Arbitrary,
         })
-        let connection = this.connection.get(guildId)
+        let connection = this.stateManager.getConnection(guildId)
 
         if (!connection) {
             if (!message.guild)
@@ -343,15 +329,15 @@ export class DiscordClientService {
                 adapterCreator: message.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
             })
 
-            this.connection.set(guildId, connection)
-            this.isPlaying.set(guildId, false)
-            this.volume.set(guildId, 1)
+            this.stateManager.setConnection(guildId, connection)
+            this.stateManager.setIsPlaying(guildId, false)
+            this.stateManager.setVolume(guildId, 1)
         }
 
-        let player = this.player.get(guildId)
+        let player = this.stateManager.getPlayer(guildId)
         if (!player) {
             const newPlayer = await this.createPlayer(message)
-            this.player.set(guildId, newPlayer)
+            this.stateManager.setPlayer(guildId, newPlayer)
             player = newPlayer
         }
 
@@ -361,133 +347,87 @@ export class DiscordClientService {
         } catch (err: any) {
             this.logger.error(err)
             await channel.send('Error occurred on player.play()')
-            throw new DiscordClientException(err.message)
+            throw new DiscordException(err.message, 'client')
         } finally {
             await this.songService.create({url: nextSong.url, title: nextSong.title})
         }
     }
 
-    public deleteCurrentInfoMsg(guildId: string) {
-        const currentInfoMsg = this.currentInfoMsg.get(guildId)
-        currentInfoMsg?.delete()
-        this.currentInfoMsg.delete(guildId)
+    // Delegate methods to ChannelStateManager
+    public deleteCurrentInfoMsg(guildId: string): void {
+        this.stateManager.deleteCurrentInfoMsg(guildId)
     }
 
-    public setDeleteQueue(guildId: string, message: Message | InteractionResponse) {
+    public setDeleteQueue(guildId: string, message: Message | InteractionResponse): void {
         if (!guildId.length)
-            throw new DiscordClientException('guildId not specified', this.setDeleteQueue.name)
-        this.deleteQueue.set(
-            guildId,
-            (this.deleteQueue.get(guildId) || new Map<string, Message | InteractionResponse>()).set(
-                message.id,
-                message,
-            ),
-        )
+            throw new DiscordException('guildId not specified', 'client', this.setDeleteQueue.name)
+        this.stateManager.addToDeleteQueue(guildId, message)
     }
 
-    public removeFromDeleteQueue(guildId: string, id: string) {
-        const innerMap = this.deleteQueue.get(guildId)
-        if (!innerMap)
-            throw new DiscordClientException(
-                'data does not exist in delete queue',
-                this.removeFromDeleteQueue.name,
-            )
-
-        innerMap.get(id)?.delete()
-        innerMap.delete(id)
-        this.deleteQueue.set(guildId, innerMap)
+    public removeFromDeleteQueue(guildId: string, id: string): void {
+        this.stateManager.removeFromDeleteQueue(guildId, id)
     }
 
-    public removeGuildFromDeleteQueue(guildId: string) {
-        const innerMap = this.deleteQueue.get(guildId)
-        if (!innerMap) return
-
-        Array.from(innerMap.keys()).forEach(key => innerMap.get(key)?.delete)
-        this.deleteQueue.delete(guildId)
+    public removeGuildFromDeleteQueue(guildId: string): void {
+        this.stateManager.clearDeleteQueue(guildId)
     }
 
-    public getConnection(guildId: string): VoiceConnection {
-        const connection = this.connection.get(guildId)
-        if (!connection)
-            throw new DiscordClientException('no such connection', this.getConnection.name)
-        return connection
+    public getConnection(guildId: string): VoiceConnection | null {
+        return this.stateManager.getConnection(guildId)
     }
 
     public setConnection(guildId: string, conn: VoiceConnection): void {
-        this.connection.set(guildId, conn)
+        this.stateManager.setConnection(guildId, conn)
     }
 
     public deleteConnection(guildId: string): void {
-        this.connection.delete(guildId)
+        this.stateManager.deleteConnection(guildId)
     }
 
-    public getTotalMusicQueue() {
-        return this.musicQueue
+    public getTotalMusicQueue(): Map<string, import('./state').ChannelState> {
+        return this.stateManager.getAll()
     }
 
     public getMusicQueue(guildId: string): Song[] {
-        return this.musicQueue.get(guildId) || []
+        return this.stateManager.getMusicQueue(guildId)
     }
 
     public setMusicQueue(guildId: string, queue: Song[]): void {
-        this.musicQueue.set(guildId, queue)
+        this.stateManager.setMusicQueue(guildId, queue)
     }
 
     public shuffleMusicQueue(guildId: string): void {
-        const shuffle = (queue: Song[]) => {
-            for (let i = queue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1))
-                ;[queue[i], queue[j]] = [queue[j], queue[i]]
-            }
-
-            return queue
-        }
-
-        const queue = this.musicQueue.get(guildId)
-        if (!queue) {
-            this.logger.debug('queue does not exist')
-            return
-        }
-
-        const current = queue.shift()
-        if (!current) {
-            this.logger.debug('queue is empty')
-            return
-        }
-
-        const shuffled = shuffle(queue)
-        shuffled.unshift(current)
-        this.musicQueue.set(guildId, shuffled)
+        this.stateManager.shuffleMusicQueue(guildId)
     }
 
     public getIsPlaying(guildId: string): boolean {
-        return this.isPlaying.get(guildId) || false
+        return this.stateManager.getIsPlaying(guildId)
     }
 
     public setIsPlaying(guildId: string, isPlaying: boolean): void {
-        this.isPlaying.set(guildId, isPlaying)
+        this.stateManager.setIsPlaying(guildId, isPlaying)
     }
 
     public getVolume(guildId: string): number {
-        return this.volume.get(guildId) || 1
+        return this.stateManager.getVolume(guildId)
     }
 
     public setVolume(guildId: string, volume: number): void {
-        this.volume.set(guildId, volume)
+        this.stateManager.setVolume(guildId, volume)
     }
 
     public getPlayer(guildId: string): AudioPlayer {
-        const player = this.player.get(guildId)
-        if (!player) throw new DiscordClientException('No player found', this.getPlayer.name)
+        const player = this.stateManager.getPlayer(guildId)
+        if (!player) throw new DiscordException('No player found', 'client', this.getPlayer.name)
         return player
     }
 
     public setPlayer(guildId: string, player: AudioPlayer): void {
-        this.player.set(guildId, player)
+        this.stateManager.setPlayer(guildId, player)
     }
 
     public deletePlayer(guildId: string): void {
-        this.player.delete(guildId)
+        this.stateManager.deletePlayer(guildId)
     }
 
     public getClient() {

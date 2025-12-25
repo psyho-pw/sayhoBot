@@ -16,8 +16,8 @@ import {
 import { DiscordClientService } from './discord.client.service'
 import { APIEmbedField } from 'discord-api-types/v10'
 import { DiscordNotificationService } from './discord.notification.service'
-import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
-import { DiscordCommandException } from '../common/exceptions/discord/discord.command.exception'
+import { HandleDiscordError } from '../common/aop'
+import { DiscordException } from '../common/exceptions/discord.exception'
 import { AppConfigService } from '../config/config.service'
 import { ParsedPlayCommand, SelectListItem, Song } from './discord.model'
 import { SimpleYoutubeAPI } from './discord.type'
@@ -41,14 +41,14 @@ export class DiscordCommandService {
             : payload.guild?.members.cache.get(payload.member?.user.id || '')?.voice.channel
     }
 
-    @HandleDiscordError(true)
+    @HandleDiscordError({ bubble: true })
     private async playlistHandler(
         url: string,
         voiceChannel: VoiceChannel | StageChannel,
         message: Message | ChatInputCommandInteraction,
     ) {
         this.logger.info('Playlist detected')
-        if (!message.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!message.guildId) throw new DiscordException('guild is not specified', 'command')
 
         const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const messageChannel = message.channel as TextChannel
@@ -108,18 +108,18 @@ export class DiscordCommandService {
                         this.configService.getDiscordConfig().MESSAGE_DELETE_TIMEOUT,
                     ),
                 )
-            throw new DiscordCommandException(err.message)
+            throw new DiscordException(err.message, 'command')
         }
     }
 
-    @HandleDiscordError(true)
+    @HandleDiscordError({ bubble: true })
     private async singleVidHandler(
         url: string,
         voiceChannel: VoiceChannel | StageChannel,
         message: Message | ChatInputCommandInteraction,
     ) {
         this.logger.info('Single video/song detected')
-        if (!message.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!message.guildId) throw new DiscordException('guild is not specified', 'command')
 
         const musicQueue = this.discordClientService.getMusicQueue(message.guildId)
         const video = await this.youtube.getVideo(url)
@@ -165,7 +165,7 @@ export class DiscordCommandService {
         }
     }
 
-    @HandleDiscordError(true)
+    @HandleDiscordError({ bubble: true })
     private async searchHandler(searchTxt: string, payload: Message | ChatInputCommandInteraction) {
         this.logger.info('Search detected')
 
@@ -207,7 +207,7 @@ export class DiscordCommandService {
         else if (payload instanceof ChatInputCommandInteraction)
             replyMessage = await payload.fetchReply()
 
-        if (!replyMessage) throw new DiscordCommandException('cannot specify reply message object')
+        if (!replyMessage) throw new DiscordException('cannot specify reply message object', 'command')
         this.discordClientService.setDeleteQueue(payload.guildId || '', replyMessage)
     }
 
@@ -267,7 +267,7 @@ export class DiscordCommandService {
 
     @HandleDiscordError()
     public async play(payload: Message | ChatInputCommandInteraction) {
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
 
@@ -349,7 +349,7 @@ export class DiscordCommandService {
                     ),
                 )
         }
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         const queue = this.discordClientService.getMusicQueue(payload.guildId)
         if (queue.length === 0) {
@@ -407,7 +407,7 @@ export class DiscordCommandService {
                     ),
                 )
         }
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         this.discordClientService.setMusicQueue(payload.guildId, [])
         this.discordClientService.setIsPlaying(payload.guildId, false)
@@ -429,7 +429,7 @@ export class DiscordCommandService {
     public async queue(payload: Message | ChatInputCommandInteraction) {
         if (!this.getVoiceChannelFromPayload(payload))
             return payload.reply('You have to be in a voice channel to see queue')
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
         if (!musicQueue.length || musicQueue.length === 1)
@@ -473,7 +473,7 @@ export class DiscordCommandService {
             )
             return
         }
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         this.logger.verbose('Skipping song...')
         const musicQueue = this.discordClientService.getMusicQueue(payload.guildId)
@@ -507,7 +507,7 @@ export class DiscordCommandService {
 
     @HandleDiscordError()
     public async shuffle(payload: Message | ChatInputCommandInteraction) {
-        if (!payload.guildId) throw new DiscordCommandException('guild is not specified')
+        if (!payload.guildId) throw new DiscordException('guild is not specified', 'command')
 
         this.discordClientService.shuffleMusicQueue(payload.guildId)
 

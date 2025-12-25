@@ -44,6 +44,9 @@ importers:
       '@snazzah/davey':
         specifier: ^0.1.9
         version: 0.1.9
+      '@toss/nestjs-aop':
+        specifier: ^2.1.7
+        version: 2.1.7(@nestjs/common@11.1.10(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.10)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@ybd-project/ytdl-core':
         specifier: ^6.0.8
         version: 6.0.8
@@ -1051,6 +1054,14 @@ packages:
 
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
+
+  '@toss/nestjs-aop@2.1.7':
+    resolution: {integrity: sha512-uvs2jh2QASP1CFJVCIerjFgrtm2iwsOJVsvkt/LBVXNoa5dnEAqvdP7/4bnKfTnh99rlwv2Qb/GSGLZSIkWaDw==}
+    peerDependencies:
+      '@nestjs/common': ^8 || ^9 || ^10 || ^11
+      '@nestjs/core': ^8 || ^9 || ^10 || ^11
+      reflect-metadata: ^0.1.13 || ^0.2.0
+      rxjs: ^7.5.6
 
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
@@ -3207,6 +3218,9 @@ packages:
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
+  ramda@0.28.0:
+    resolution: {integrity: sha512-9QnLuG/kPVgWvMQ4aODhsBUFKOUmnbUnsSXACv+NCQZcHbeb+v8Lodp8OVxtRULN1/xOyYLLaL6npE6dMq5QTA==}
+
   random-bytes@1.0.0:
     resolution: {integrity: sha512-iv7LhNVO047HzYR3InF6pUcUsPQiHTM1Qal51DcGSuZFBil1aBBWG5eHPNek7bvILMaYJ/8RU1e8w1AMdHmLQQ==}
     engines: {node: '>= 0.8'}
@@ -5065,6 +5079,14 @@ snapshots:
       - supports-color
 
   '@tokenizer/token@0.3.0': {}
+
+  '@toss/nestjs-aop@2.1.7(@nestjs/common@11.1.10(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.10)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+    dependencies:
+      '@nestjs/common': 11.1.10(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.1.10(@nestjs/common@11.1.10(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.10)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      ramda: 0.28.0
+      reflect-metadata: 0.2.2
+      rxjs: 7.8.2
 
   '@tsconfig/node10@1.0.11': {}
 
@@ -7474,6 +7496,8 @@ snapshots:
       side-channel: 1.1.0
 
   queue-microtask@1.2.3: {}
+
+  ramda@0.28.0: {}
 
   random-bytes@1.0.0: {}
 

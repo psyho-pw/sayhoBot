@@ -15,7 +15,7 @@ import {
     VoiceState,
 } from 'discord.js'
 import {AppConfigService} from '../config/config.service'
-import {HandleDiscordError} from '../common/decorators/discordErrorHandler.decorator'
+import {HandleDiscordError} from '../common/aop'
 
 @Injectable()
 export class DiscordService {

@@ -5,7 +5,7 @@ import {HttpService} from '@nestjs/axios'
 import {EmbedBuilder, WebhookClient} from 'discord.js'
 import {APIEmbedField} from 'discord-api-types/v10'
 import {AppConfigService} from 'src/config/config.service'
-import {DiscordNotificationException} from '../common/exceptions/discord/discord.notification.exception'
+import {DiscordException} from '../common/exceptions/discord.exception'
 import {GeneralException} from '../common/exceptions/general.exception'
 
 @Injectable()
@@ -20,8 +20,9 @@ export class DiscordNotificationService {
         if (!this.#webhookId || !this.#webhookToken) {
             const credentials = await this.httpService.axiosRef.get(config.WEBHOOK_URL)
             if (!credentials.data.id || !credentials.data.token) {
-                throw new DiscordNotificationException(
+                throw new DiscordException(
                     'webhook credential fetch error',
+                    'notification',
                     this.getCredentials.name,
                 )
             }

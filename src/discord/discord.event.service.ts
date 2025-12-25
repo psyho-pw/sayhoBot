@@ -16,8 +16,8 @@ import {
     Snowflake,
     VoiceState,
 } from 'discord.js'
-import { HandleDiscordError } from '../common/decorators/discordErrorHandler.decorator'
-import { DiscordEventException } from '../common/exceptions/discord/discord.event.exception'
+import { HandleDiscordError } from '../common/aop'
+import { DiscordException } from '../common/exceptions/discord.exception'
 import { AppConfigService } from '../config/config.service'
 import { Song } from './discord.model'
 import { SimpleYoutubeAPI } from './discord.type'
@@ -68,7 +68,7 @@ export class DiscordEventService {
             <Snowflake>interaction.member?.user.id,
         )
 
-        if (!guild) throw new DiscordEventException('guild is not specified')
+        if (!guild) throw new DiscordException('guild is not specified', 'event')
         if (!member || !member.voice.channel) return interaction.reply('Cannot find channel')
 
         const song: Song | null = this.discordClientService.formatVideo(video, member.voice.channel)
