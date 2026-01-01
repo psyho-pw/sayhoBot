@@ -46,9 +46,7 @@ export class StreamProviderAdapter implements IStreamProvider {
   async createStream(url: string): Promise<Readable> {
     const ytdl = this.createYtdlClient();
     try {
-      const webStream = await ytdl.download(url, {
-        filter: 'audioandvideo',
-      });
+      const webStream = await ytdl.download(url, { filter: 'audioandvideo' });
       return toPipeableStream(webStream);
     } catch (error: any) {
       const isMediaNotFound =

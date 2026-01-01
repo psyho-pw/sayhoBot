@@ -30,7 +30,11 @@ export interface PlayContext {
 export class PlayerAdapter {
   constructor(private readonly stateAdapter: ChannelStateAdapter) {}
 
-  public createPlayer(context: PlayContext, onPlayNext: () => Promise<void>): AudioPlayer {
+  public createPlayer(
+    context: PlayContext,
+    onPlayNext: () => Promise<void>,
+    onQueueEmpty: () => void,
+  ): AudioPlayer {
     const player = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Pause } });
 
     player.on('stateChange', async (oldState, newState) => {
@@ -48,6 +52,7 @@ export class PlayerAdapter {
           await onPlayNext();
         } else {
           this.stateAdapter.setIsPlaying(context.guildId, false);
+          onQueueEmpty();
         }
       }
     });
@@ -67,6 +72,7 @@ export class PlayerAdapter {
         await onPlayNext();
       } else {
         this.stateAdapter.setIsPlaying(context.guildId, false);
+        onQueueEmpty();
       }
     });
 
@@ -74,12 +80,16 @@ export class PlayerAdapter {
     return player;
   }
 
-  public getOrCreatePlayer(context: PlayContext, onPlayNext: () => Promise<void>): AudioPlayer {
+  public getOrCreatePlayer(
+    context: PlayContext,
+    onPlayNext: () => Promise<void>,
+    onQueueEmpty: () => void,
+  ): AudioPlayer {
     const existingPlayer = this.stateAdapter.getPlayer(context.guildId);
     if (existingPlayer) {
       return existingPlayer;
     }
-    return this.createPlayer(context, onPlayNext);
+    return this.createPlayer(context, onPlayNext, onQueueEmpty);
   }
 
   public getOrCreateConnection(
