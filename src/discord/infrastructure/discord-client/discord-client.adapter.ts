@@ -90,6 +90,31 @@ export class DiscordClientAdapter {
       .setThumbnail(thumbnail);
   }
 
+  private async createAudioResourceWithRecovery(
+    guildId: string,
+    song: Song,
+    channel: TextChannel,
+  ): Promise<Awaited<ReturnType<IStreamProvider['createAudioResourceFromUrl']>> | null> {
+    try {
+      return await this.streamProvider.createAudioResourceFromUrl(song.url);
+    } catch (error: any) {
+      this.logger.error({
+        ctx: this.createAudioResourceWithRecovery.name,
+        info: `Stream creation failed for ${song.title}: ${error.message}`,
+      });
+      await channel.send(`Failed to play: ${song.title}\nSkipping to next song...`);
+
+      this.stateAdapter.removeCurrentSong(guildId);
+
+      if (this.stateAdapter.getMusicQueue(guildId).length === 0) {
+        this.stateAdapter.setIsPlaying(guildId, false);
+        await channel.send('Queue is empty.');
+      }
+
+      return null;
+    }
+  }
+
   @HandleDiscordError()
   public async playSong(message: Message | ChatInputCommandInteraction): Promise<Message | void> {
     const guildId = message.guildId;
@@ -101,7 +126,13 @@ export class DiscordClientAdapter {
 
     const currentSong = musicQueue[0];
 
-    const resource = await this.streamProvider.createAudioResourceFromUrl(currentSong.url);
+    const resource = await this.createAudioResourceWithRecovery(guildId, currentSong, channel);
+    if (!resource) {
+      if (this.stateAdapter.getMusicQueue(guildId).length > 0) {
+        return this.playSong(message);
+      }
+      return;
+    }
 
     if (!message.guild) {
       return channel.send(`Error occurred on joining voice channel\nguild is not defined`);

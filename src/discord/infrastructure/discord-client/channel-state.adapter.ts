@@ -64,6 +64,10 @@ export class ChannelStateAdapter {
     this.getQueueState(guildId).clear();
   }
 
+  removeCurrentSong(guildId: string): Song | undefined {
+    return this.getQueueState(guildId).removeCurrent();
+  }
+
   shuffleMusicQueue(guildId: string): void {
     const queueState = this.getQueueState(guildId);
     const queue = [...queueState.queue];
