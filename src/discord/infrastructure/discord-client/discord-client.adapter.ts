@@ -153,18 +153,27 @@ export class DiscordClientAdapter {
       voiceChannel,
     );
 
-    const player = this.playerAdapter.getOrCreatePlayer({ message, guildId, channel }, async () => {
-      await this.playSong(message);
-    });
+    const player = this.playerAdapter.getOrCreatePlayer(
+      { message, guildId, channel },
+      async () => {
+        await this.playSong(message);
+      },
+      () => {
+        this.handleQueueEmpty(guildId, channel);
+      },
+    );
 
     try {
       this.playerAdapter.play(player, connection, resource);
+      this.stateAdapter.setIsPlaying(guildId, true);
+      await this.sendNowPlayingMessage(guildId, currentSong, channel);
     } catch (err: any) {
       this.logger.error({
         ctx: this.playSong.name,
         info: err,
       });
       await channel.send('Error occurred on player.play()');
+      this.stateAdapter.setIsPlaying(guildId, false);
       throw new DiscordException(err.message, 'client');
     } finally {
       await this.songService.create({
@@ -172,6 +181,51 @@ export class DiscordClientAdapter {
         title: currentSong.title,
       });
     }
+  }
+
+  private async sendNowPlayingMessage(
+    guildId: string,
+    song: Song,
+    channel: TextChannel,
+  ): Promise<void> {
+    this.deleteCurrentInfoMsg(guildId);
+
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`:: Currently playing :arrow_forward: ::`)
+      .setDescription(`[${song.title}](${song.url})`)
+      .setThumbnail(song.thumbnail)
+      .addFields([{ name: 'Duration', value: song.duration || '??:??' }]);
+
+    const msg = await channel.send({ embeds: [embed] });
+    this.stateAdapter.setCurrentInfoMsg(guildId, msg);
+  }
+
+  private handleQueueEmpty(guildId: string, channel: TextChannel): void {
+    this.deleteCurrentInfoMsg(guildId);
+    this.logger.debug({ ctx: this.handleQueueEmpty.name, info: 'queue empty' });
+
+    setTimeout(() => {
+      const queue = this.stateAdapter.getMusicQueue(guildId);
+      const isPlaying = this.stateAdapter.getIsPlaying(guildId);
+
+      if (queue.length === 0 && !isPlaying) {
+        this.stateAdapter.clearQueue(guildId);
+        this.stateAdapter.setIsPlaying(guildId, false);
+        this.stateAdapter.setVolume(guildId, 1);
+
+        channel
+          .send(`Disconnected from channel due to inactivity`)
+          .then((msg) =>
+            setTimeout(
+              () => msg.delete().catch(() => {}),
+              this.configService.discordConfig.MESSAGE_DELETE_TIMEOUT,
+            ),
+          );
+        this.stateAdapter.getConnection(guildId)?.destroy();
+        this.stateAdapter.deleteConnection(guildId);
+      }
+    }, 180000);
   }
 
   // Delegate methods to ChannelStateAdapter
