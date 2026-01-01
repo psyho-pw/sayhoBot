@@ -1,4 +1,7 @@
 onlyBuiltDependencies:
   - '@discordjs/opus'
-  - sodium-native
+  - '@nestjs/core'
   - '@snazzah/davey'
+  - ffmpeg-static
+  - sodium-native
+  - unrs-resolver

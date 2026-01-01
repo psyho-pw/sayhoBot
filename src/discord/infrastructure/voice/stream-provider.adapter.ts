@@ -45,10 +45,25 @@ export class StreamProviderAdapter implements IStreamProvider {
 
   async createStream(url: string): Promise<Readable> {
     const ytdl = this.createYtdlClient();
-    const webStream = await ytdl.download(url, {
-      filter: 'audioandvideo',
-    });
-    return toPipeableStream(webStream);
+    try {
+      const webStream = await ytdl.download(url, {
+        filter: 'audioandvideo',
+      });
+      return toPipeableStream(webStream);
+    } catch (error: any) {
+      const isMediaNotFound =
+        error?.message?.includes('formats') ||
+        error?.message?.includes('Cannot read properties of null');
+      if (isMediaNotFound) {
+        throw new Error(
+          `Cannot get YouTube video information. The video may have been deleted or made private. URL: ${url}`,
+        );
+      }
+
+      throw new Error(
+        `An error occurred while creating the stream: ${error?.message || error}. URL: ${url}`,
+      );
+    }
   }
 
   createAudioResource(stream: Readable): AudioResource {
