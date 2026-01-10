@@ -20,6 +20,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         waitForConnections: true,
         enableKeepAlive: true,
         keepAliveInitialDelay: 10000,
+        ssl: {},
       },
       retryAttempts: 3,
       retryDelay: 3000,
