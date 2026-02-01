@@ -35,5 +35,5 @@ COPY pnpm-lock.yaml ./
 RUN pnpm install --prod
 COPY dist ./dist
 
-CMD ["node", "dist/src/main"]
+CMD ["node", "dist/main"]
 
