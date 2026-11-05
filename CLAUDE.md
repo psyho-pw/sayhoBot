@@ -147,7 +147,7 @@ Available commands: `play`/`p`, `skip`/`s`, `queue`/`q`, `empty`/`eq`, `leave`/`
    - `onIdle` callback removes song, calls `playNext()`
    - Continues until queue empty
 
-**Stream Provider** uses retry logic with exponential backoff for network failures and proxy support via undici.
+**Stream Provider** spawns the `yt-dlp` binary (must be on `PATH`; installed in the Dockerfile) and pipes its stdout as the audio stream. yt-dlp failures reject the promise, so the caller skips the song instead of crashing.
 
 ### Aspect-Oriented Programming
 
@@ -166,7 +166,7 @@ Applied to event handlers and critical operations.
 
 **Search**: `YoutubeSearchAdapter` wraps `simple-youtube-api` for video/playlist searches.
 
-**Streaming**: `StreamProviderAdapter` uses `@ybd-project/ytdl-core` with proxy support and detailed error categorization.
+**Streaming**: `StreamProviderAdapter` runs `yt-dlp -f bestaudio -o -` with `--js-runtimes node` (player JS challenges) and `--proxy` when `PROXY` is set. Bump `YT_DLP_VERSION` in the Dockerfile when YouTube breaks extraction.
 
 ### Database
 

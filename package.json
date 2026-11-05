@@ -35,7 +35,6 @@
     "@nestjs/typeorm": "^11.0.0",
     "@snazzah/davey": "^0.1.9",
     "@toss/nestjs-aop": "^2.1.7",
-    "@ybd-project/ytdl-core": "^6.0.8",
     "axios": "^1.10.0",
     "bgutils-js": "^3.2.0",
     "class-transformer": "^0.5.1",
