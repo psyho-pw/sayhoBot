@@ -38,10 +38,24 @@ export class StreamProviderAdapter implements IStreamProvider {
     return [...args, '--', url];
   }
 
+  private redactProxy(text: string): string {
+    const proxy = this.configService.appConfig.PROXY;
+    const secrets = proxy ? [proxy] : [];
+    try {
+      const { password } = new URL(proxy);
+      if (password) secrets.push(password, decodeURIComponent(password));
+    } catch {
+      secrets.push(...proxy.split(/[:@/]/).filter((part) => part.length >= 4));
+    }
+    return secrets
+      .reduce((acc, secret) => acc.split(secret).join('***'), text)
+      .replace(/(\w+:\/\/)\S*@/g, '$1***@');
+  }
+
   createStream(url: string): Promise<Readable> {
     const child = spawn('yt-dlp', this.buildArgs(url), { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
-    child.stderr.on('data', (chunk) => (stderr = (stderr + chunk).slice(-2000)));
+    child.stderr.on('data', (chunk) => (stderr += chunk));
     child.stdout.once('close', () => child.kill());
 
     return new Promise((resolve, reject) => {
@@ -68,7 +82,7 @@ export class StreamProviderAdapter implements IStreamProvider {
       child.once('close', (code, signal) => {
         clearTimeout(timer);
         if (code === 0 || signal) return reject(new Error(`yt-dlp produced no audio: ${url}`));
-        const detail = stderr.replace(/(\w+:\/\/)[^:@/\s]+:[^@/\s]+@/g, '$1***:***@').trim();
+        const detail = this.redactProxy(stderr).slice(-2000).trim();
         fail(new Error(`yt-dlp exited with code ${code}: ${detail || 'no output'}`));
       });
     });

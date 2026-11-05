@@ -52,10 +52,19 @@ describe('StreamProviderAdapter', () => {
   });
 
   it('masks proxy credentials in the error message', async () => {
-    fakeYtDlp('echo "ERROR: Unable to connect to proxy http://user:secret@proxy:8080" >&2; exit 1');
-    await expect(adapter.createStream('https://youtu.be/x')).rejects.toThrow(
-      'http://***:***@proxy:8080',
+    adapter = new StreamProviderAdapter(
+      { appConfig: { PROXY: 'http://user:s%2Fcret@proxy:8080' } } as any,
+      { error: jest.fn() } as any,
     );
+    fakeYtDlp(
+      'echo "ERROR: proxy http://user:s%2Fcret@proxy:8080 refused; auth s/cret rejected" >&2; exit 1',
+    );
+    const error = await adapter.createStream('https://youtu.be/x').then(
+      () => new Error('expected rejection'),
+      (e: Error) => e,
+    );
+    expect(error.message).toContain('yt-dlp exited with code 1');
+    expect(error.message).not.toMatch(/s%2Fcret|s\/cret/);
   });
 
   it('kills yt-dlp and rejects when no audio arrives in time', async () => {
