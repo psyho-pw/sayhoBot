@@ -68,7 +68,8 @@ export class StreamProviderAdapter implements IStreamProvider {
       child.once('close', (code, signal) => {
         clearTimeout(timer);
         if (code === 0 || signal) return reject(new Error(`yt-dlp produced no audio: ${url}`));
-        fail(new Error(`yt-dlp exited with code ${code}: ${stderr.trim() || 'no output'}`));
+        const detail = stderr.replace(/(\w+:\/\/)[^:@/\s]+:[^@/\s]+@/g, '$1***:***@').trim();
+        fail(new Error(`yt-dlp exited with code ${code}: ${detail || 'no output'}`));
       });
     });
   }
