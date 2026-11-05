@@ -55,7 +55,7 @@ export class StreamProviderAdapter implements IStreamProvider {
   createStream(url: string): Promise<Readable> {
     const child = spawn('yt-dlp', this.buildArgs(url), { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
-    child.stderr.on('data', (chunk) => (stderr += chunk));
+    child.stderr.on('data', (chunk) => (stderr = (stderr + chunk).slice(-8000)));
     child.stdout.once('close', () => child.kill());
 
     return new Promise((resolve, reject) => {
