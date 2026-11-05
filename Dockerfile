@@ -13,7 +13,7 @@ RUN which pnpm
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN pnpm install
 
@@ -38,7 +38,7 @@ ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod
 COPY dist ./dist
 

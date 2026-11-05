@@ -1,7 +1,6 @@
-onlyBuiltDependencies:
-  - '@discordjs/opus'
-  - '@nestjs/core'
-  - '@snazzah/davey'
-  - ffmpeg-static
-  - sodium-native
-  - unrs-resolver
+allowBuilds:
+  '@discordjs/opus': true
+  '@nestjs/core': true
+  '@swc/core': false
+  ffmpeg-static: true
+  unrs-resolver: true
